@@ -1,69 +1,46 @@
 import Link from "next/link";
+import Image from "next/image"; // 画像を扱うために追加
 
-import { LatestPost } from "~/app/_components/post";
 import { auth } from "~/server/auth";
-import { api, HydrateClient } from "~/trpc/server";
 
 export default async function Home() {
-  const hello = await api.post.hello({ text: "from tRPC" });
   const session = await auth();
 
-  if (session?.user) {
-    void api.post.getLatest.prefetch();
-  }
-
   return (
-    <HydrateClient>
-      <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-          <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
-            Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
-          </h1>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-            <Link
-              className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-              href="https://create.t3.gg/en/usage/first-steps"
-              target="_blank"
-            >
-              <h3 className="text-2xl font-bold">First Steps →</h3>
-              <div className="text-lg">
-                Just the basics - Everything you need to know to set up your
-                database and authentication.
-              </div>
-            </Link>
-            <Link
-              className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-              href="https://create.t3.gg/en/introduction"
-              target="_blank"
-            >
-              <h3 className="text-2xl font-bold">Documentation →</h3>
-              <div className="text-lg">
-                Learn more about Create T3 App, the libraries it uses, and how
-                to deploy it.
-              </div>
-            </Link>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-2xl text-white">
-              {hello ? hello.greeting : "Loading tRPC query..."}
-            </p>
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#e8f5e9] to-[#c8e6c9]">
+      <div className="bg-white w-full max-w-lg rounded-3xl p-10 text-center shadow-xl transition-transform duration-300 hover:scale-105">
+        {/* タイトル */}
+        <h1 className="text-gray-900 mb-6 text-5xl font-bold leading-tight tracking-tight">
+          <span className="text-[#4caf50]">Read</span> Scape
+        </h1>
 
-            <div className="flex flex-col items-center justify-center gap-4">
-              <p className="text-center text-2xl text-white">
-                {session && <span>Logged in as {session.user?.name}</span>}
-              </p>
-              <Link
-                href={session ? "/api/auth/signout" : "/api/auth/signin"}
-                className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
-              >
-                {session ? "Sign out" : "Sign in"}
-              </Link>
-            </div>
-          </div>
-
-          {session?.user && <LatestPost />}
+        {/* 認証ボタン */}
+        <div className="mb-8">
+          <Link
+            href={session ? "/api/auth/signout" : "/api/auth/signin"}
+            className="text-white inline-block rounded-full bg-gradient-to-r from-[#4caf50] to-[#66bb6a] px-8 py-3 text-lg font-semibold shadow-md transition-all duration-300 hover:from-[#43a047] hover:to-[#81c784] hover:shadow-lg"
+          >
+            {session ? "Sign Out" : "Get Started with Google Login"}
+          </Link>
         </div>
-      </main>
-    </HydrateClient>
+
+        {/* サブタイトル */}
+        <p className="text-gray-600 mb-10 text-lg italic leading-relaxed">
+          - Technical Article Bookmarking & <br />
+          Progress Management Tool -
+        </p>
+
+        {/* イラスト */}
+        <div className="relative mx-auto h-72 w-full">
+          <Image
+            src="/images/main-img.png"
+            alt="Workspace illustration"
+            layout="fill"
+            objectFit="contain"
+            className="rounded-xl shadow-lg transition-shadow duration-300 hover:shadow-xl"
+          />
+        </div>
+      </div>
+    </main>
   );
 }
