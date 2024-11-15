@@ -1,4 +1,4 @@
-export default function Header() {
+export default function header() {
   return (
     <header className="flex items-center justify-between rounded-b-2xl bg-[#f1fdf5] p-6 shadow-lg">
       {/* ロゴ */}
