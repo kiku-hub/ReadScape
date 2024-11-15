@@ -1,4 +1,14 @@
+import Link from "next/link";
+
 export default function Header() {
+  const session = true; // 仮のセッション状態（必要に応じて置き換え）
+
+  // 認証ボタンのラベルとリンク先
+  const authButton = {
+    label: session ? "Sign Out" : "Sign In",
+    href: session ? "/api/auth/signout" : "/api/auth/signin",
+  };
+
   return (
     <header className="flex items-center justify-between rounded-b-2xl bg-[#f1fdf5] p-6 shadow-lg">
       {/* ロゴ */}
@@ -6,8 +16,11 @@ export default function Header() {
         Read Scape
       </h1>
 
-      {/* ボタン */}
-      <button className="text-white flex items-center gap-2 rounded-full bg-gradient-to-r from-[#4caf50] to-[#66bb6a] px-6 py-3 font-bold shadow-lg transition-transform duration-300 hover:scale-105 hover:from-[#43a047] hover:to-[#81c784]">
+      {/* 認証ボタン */}
+      <Link
+        href={authButton.href}
+        className="text-white flex items-center gap-2 rounded-full bg-gradient-to-r from-[#4caf50] to-[#66bb6a] px-6 py-3 font-bold shadow-lg transition-transform duration-300 hover:scale-105 hover:from-[#43a047] hover:to-[#81c784]"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className="h-5 w-5"
@@ -22,8 +35,8 @@ export default function Header() {
             d="M4 16l4 4m0 0l4-4m-4 4V4"
           />
         </svg>
-        logout
-      </button>
+        {authButton.label}
+      </Link>
     </header>
   );
 }
