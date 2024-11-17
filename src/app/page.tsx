@@ -1,47 +1,56 @@
-import Link from "next/link";
-import Image from "next/image"; // 画像を扱うために追加
+import Link from "next/link"; // Linkをインポート
+import Image from "next/image"; // next/imageをインポート
 import { auth } from "~/server/auth";
-import Header from "./_components/Header";
-import Container from "./_components/Container";
 
+// 未ログイン画面
+function UnauthenticatedView() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#f3f8f4] to-[#d4e7d6]">
+      <div className="bg-white w-full max-w-lg rounded-3xl p-10 text-center shadow-2xl">
+        {/* タイトル */}
+        <h1 className="mb-6 text-6xl font-extrabold leading-tight tracking-tight text-[#43a047] hover:animate-pulse">
+          Read<span className="text-[#66bb6a]">Scape</span>
+        </h1>
+
+        {/* サブタイトル */}
+        <p className="text-gray-700 mb-10 text-lg italic leading-relaxed transition-all duration-300 hover:scale-105 hover:text-[#388e3c]">
+          - Bookmark & Progress Management Tool for Tech Learners -
+        </p>
+
+        {/* ボタン */}
+        <div className="mb-8">
+          <Link
+            href="/api/auth/signin"
+            className="text-white focus:ring-green-300 relative inline-block overflow-hidden rounded-full bg-gradient-to-r from-[#66bb6a] to-[#43a047] px-12 py-4 text-lg font-bold shadow-lg transition-transform duration-300 hover:scale-110 focus:outline-none focus:ring-4 active:scale-95"
+          >
+            <span className="bg-white absolute inset-0 opacity-20 blur-xl"></span>
+            Get Started with Google Login
+          </Link>
+        </div>
+
+        {/* イラスト */}
+        <div className="relative mx-auto mt-10 flex max-w-xs items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-[#f9fbf8] to-[#eaf3e8] shadow-2xl transition-transform duration-500 hover:scale-105">
+          <Image
+            src="/images/main-img.png"
+            alt="Workspace illustration"
+            width={200} // 適切な幅
+            height={200} // 適切な高さ
+            className="rounded-lg object-contain transition-transform duration-700 hover:rotate-6 hover:scale-110"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// メインコンポーネント
 export default async function Home() {
   const session = await auth();
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#e8f5e9] to-[#c8e6c9]">
-      <div className="bg-white w-full max-w-lg rounded-3xl p-10 text-center shadow-xl transition-transform duration-300 hover:scale-105">
-        {/* タイトル */}
-        <h1 className="text-gray-900 mb-6 text-5xl font-bold leading-tight tracking-tight">
-          <span className="text-[#4caf50]">Read</span> Scape
-        </h1>
-
-        {/* 認証ボタン */}
-        <div className="mb-8">
-          <Link
-            href={session ? "/api/auth/signout" : "/api/auth/signin"}
-            className="text-white inline-block rounded-full bg-gradient-to-r from-[#4caf50] to-[#66bb6a] px-8 py-3 text-lg font-semibold shadow-md transition-all duration-300 hover:from-[#43a047] hover:to-[#81c784] hover:shadow-lg"
-          >
-            {session ? "Sign Out" : "Get Started with Google Login"}
-          </Link>
-        </div>
-
-        {/* サブタイトル */}
-        <p className="text-gray-600 mb-10 text-lg italic leading-relaxed">
-          - Technical Article Bookmarking & <br />
-          Progress Management Tool -
-        </p>
-
-        {/* イラスト */}
-        <div className="relative mx-auto h-72 w-full">
-          <Image
-            src="/images/main-img.png"
-            alt="Workspace illustration"
-            layout="fill"
-            objectFit="contain"
-            className="rounded-xl shadow-lg transition-shadow duration-300 hover:shadow-xl"
-          />
-        </div>
-      </div>
+    <main className="flex min-h-screen flex-col bg-gradient-to-br from-[#eefaf2] to-[#d7ebdb]">
+      {/* ログイン状態に応じて表示を切り替え */}
+      {!session && <UnauthenticatedView />}
     </main>
   );
 }
