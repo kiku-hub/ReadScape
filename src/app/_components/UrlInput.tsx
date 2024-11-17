@@ -1,67 +1,118 @@
-import React from "react";
-import { TextField, IconButton, Box } from "@mui/material";
-import AddCircleIcon from "@mui/icons-material/AddCircle";
+"use client"; // クライアントサイドで実行
 
-const UrlInput: React.FC = () => {
+import React, { useState, useEffect } from "react";
+
+interface UrlInputProps {
+  onUrlSubmit: (url: string) => void; // URLを親コンポーネントに渡す関数
+}
+
+const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit }) => {
+  const [url, setUrl] = useState("");
+  const [isActive, setIsActive] = useState(false); // フレームの表示状態
+
+  const handleAddClick = () => {
+    if (url.trim()) {
+      onUrlSubmit(url); // URLを親コンポーネントに渡す
+      setUrl(""); // 入力欄をリセット
+    }
+  };
+
+  const handleInputClick = () => {
+    setIsActive(true); // フレームを表示
+  };
+
+  const handleOutsideClick = (e: MouseEvent) => {
+    // 入力部分の外をクリックしたときにフレームを消す
+    if (
+      !document
+        .getElementById("url-input-container")
+        ?.contains(e.target as Node)
+    ) {
+      setIsActive(false);
+    }
+  };
+
+  useEffect(() => {
+    // 外部クリックを監視するイベントリスナーを登録
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      // クリーンアップ
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
   return (
-    <Box
-      sx={{
+    <div
+      id="url-input-container"
+      style={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent: "center",
         width: "100%",
-        maxWidth: 500,
+        maxWidth: "600px",
         margin: "20px auto",
-        background: "linear-gradient(135deg, #e3f2fd, #ffffff)",
-        borderRadius: "30px",
-        boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-        padding: "10px 15px",
+        background: "linear-gradient(135deg, #ffffff, #f3f4f6)", // シンプルなグラデーション
+        borderRadius: "50px", // 丸みのあるデザイン
+        boxShadow: isActive
+          ? "0 0 10px 3px rgba(59, 130, 246, 0.8)" // アクティブ時のフレーム
+          : "0 10px 20px rgba(0, 0, 0, 0.1)", // 通常時のシャドウ
+        padding: "10px 20px",
         gap: "10px",
+        position: "relative", // フレーム効果に対応
+        transition: "box-shadow 0.3s ease",
       }}
     >
-      <TextField
-        variant="outlined"
-        placeholder="URLを入力してください"
-        InputProps={{
-          sx: {
-            backgroundColor: "#ffffff",
-            borderRadius: "20px",
-            padding: "10px",
-            "& .MuiOutlinedInput-notchedOutline": {
-              border: "none",
-            },
-            "& input": {
-              fontSize: "16px",
-              color: "#333",
-            },
-            "& input::placeholder": {
-              color: "#999",
-            },
-          },
+      <input
+        type="text"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        onClick={handleInputClick} // 入力をクリックしたらフレーム表示
+        placeholder="Enter URL"
+        style={{
+          flex: 1,
+          backgroundColor: "#ffffff",
+          border: "none",
+          borderRadius: "50px",
+          padding: "10px 20px",
+          fontSize: "16px",
+          color: "#4a5568",
+          outline: "none",
+          boxShadow: "inset 0 2px 5px rgba(0, 0, 0, 0.1)", // 内側の影で立体感を追加
+          transition: "background-color 0.3s ease",
         }}
-        fullWidth
+        onFocus={(e) => (e.target.style.backgroundColor = "#f9fafb")} // フォーカス時の背景色
+        onBlur={(e) => (e.target.style.backgroundColor = "#ffffff")} // フォーカス解除時の背景色
       />
-      <IconButton
-        sx={{
-          backgroundColor: "#42a5f5",
+      <button
+        onClick={handleAddClick}
+        style={{
+          background: "linear-gradient(135deg, #06b6d4, #3b82f6)", // モダンな青系グラデーション
           color: "#ffffff",
+          border: "none",
           borderRadius: "50%",
           width: "50px",
           height: "50px",
-          boxShadow: "0 4px 8px rgba(66, 165, 245, 0.4)",
-          transition: "transform 0.3s ease, background-color 0.3s ease",
-          "&:hover": {
-            backgroundColor: "#1e88e5",
-            transform: "scale(1.1)",
-          },
-          "&:active": {
-            transform: "scale(0.9)",
-          },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 6px 12px rgba(59, 130, 246, 0.5)", // ボタンのシャドウ
+          cursor: "pointer",
+          transition: "transform 0.3s ease, box-shadow 0.3s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "scale(1.1)";
+          e.currentTarget.style.boxShadow =
+            "0 8px 16px rgba(59, 130, 246, 0.6)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow =
+            "0 6px 12px rgba(59, 130, 246, 0.5)";
         }}
       >
-        <AddCircleIcon fontSize="large" />
-      </IconButton>
-    </Box>
+        +
+      </button>
+    </div>
   );
 };
 

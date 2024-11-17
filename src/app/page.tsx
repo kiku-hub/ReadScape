@@ -48,10 +48,8 @@ function UnauthenticatedView() {
 function AuthenticatedView() {
   return (
     <div className="flex min-h-screen flex-col items-center bg-gradient-to-br from-[#e6ffe9] to-[#c7f4d6]">
-      {/* URL入力コンポーネントを上部に配置 */}
-      <div className="bg-white mt-10 w-full max-w-lg rounded-3xl p-6 shadow-2xl">
-        <UrlInput />
-      </div>
+      {/* URL入力コンポーネントを中央に配置 */}
+      <UrlInput />
     </div>
   );
 }
