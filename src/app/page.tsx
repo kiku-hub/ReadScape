@@ -2,6 +2,7 @@ import Link from "next/link"; // Linkをインポート
 import Image from "next/image"; // next/imageをインポート
 import { auth } from "~/server/auth";
 import UrlInput from "./_components/UrlInput"; // UrlInputをインポート
+import StatusTabs from "./_components/StatusTabs"; // StatusTabsをインポート
 
 // 未ログイン画面
 function UnauthenticatedView() {
@@ -50,16 +51,20 @@ function AuthenticatedView() {
     <div className="flex min-h-screen flex-col items-center bg-gradient-to-br from-[#e6ffe9] to-[#c7f4d6]">
       {/* URL入力コンポーネントを中央に配置 */}
       <UrlInput />
+
+      {/* ステータスタブを表示 */}
+      <div className="mt-10 w-full max-w-4xl">
+        <StatusTabs />
+      </div>
     </div>
   );
 }
 
-// メインコンポーネント
 export default async function Home() {
   const session = await auth();
 
   return (
-    <main className="flex min-h-screen flex-col bg-gradient-to-br from-[#eefaf2] to-[#d7ebdb]">
+    <main className="flex min-h-screen flex-col bg-gradient-to-br from-[#f5fdf7] to-[#e3f4e7]">
       {/* ログイン状態に応じて表示を切り替え */}
       {session ? <AuthenticatedView /> : <UnauthenticatedView />}
     </main>
