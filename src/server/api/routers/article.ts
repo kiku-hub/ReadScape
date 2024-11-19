@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  publicProcedure,
+  protectedProcedure,
+} from "~/server/api/trpc";
 
-// ArticleDetailsのZodスキーマを定義
 export const articleDetailsSchema = z.object({
   title: z.string().min(1, "タイトルは必須です"),
   url: z.string().url("有効なURLを入力してください"),
@@ -10,12 +13,16 @@ export const articleDetailsSchema = z.object({
   description: z.string().nullable(),
 });
 
-// 入力のバリデーションスキーマ
 const urlInputSchema = z.object({
   url: z.string().url({ message: "有効なURLを入力してください" }),
 });
 
-// 型を導出してエクスポート
+const saveArticleSchema = z.object({
+  url: z.string().url(),
+  status: z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED"]),
+  memo: z.string().optional(),
+});
+
 export type ArticleDetails = z.infer<typeof articleDetailsSchema>;
 
 export const articleRouter = createTRPCRouter({
@@ -24,10 +31,8 @@ export const articleRouter = createTRPCRouter({
     .output(articleDetailsSchema)
     .mutation(async ({ input }): Promise<ArticleDetails> => {
       try {
-        // URLの検証
         const validatedUrl = urlInputSchema.parse(input);
 
-        // フェッチ処理
         const response = await fetch(validatedUrl.url, {
           method: "GET",
           headers: {
@@ -42,10 +47,8 @@ export const articleRouter = createTRPCRouter({
           });
         }
 
-        // TODO: OGPの解析処理を実装する
         await response.text();
 
-        // 仮のレスポンスデータを作成
         const articleData = {
           title: "記事タイトル",
           url: validatedUrl.url,
@@ -53,17 +56,15 @@ export const articleRouter = createTRPCRouter({
           description: null,
         };
 
-        // レスポンスデータの検証
         const validatedArticle = articleDetailsSchema.parse(articleData);
 
         return validatedArticle;
       } catch (error) {
-        // エラーハンドリングの改善
         if (error instanceof z.ZodError) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "データの形式が不正です",
-            cause: error,
+            cause: error.message,
           });
         }
 
@@ -71,12 +72,37 @@ export const articleRouter = createTRPCRouter({
           throw error;
         }
 
-        // 未知のエラーの場合
-        console.error("Unexpected error:", error);
+        if (error instanceof Error) {
+          console.error("Unexpected error:", error.message);
+        }
+
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "記事情報の取得に失敗しました",
-          cause: error,
+        });
+      }
+    }),
+
+  save: protectedProcedure
+    .input(saveArticleSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const article = await ctx.db.article.create({
+          data: {
+            url: input.url,
+            status: input.status,
+            memo: input.memo,
+            userId: ctx.session.user.id,
+          },
+        });
+        return article;
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error("Save error:", error.message);
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "記事の保存に失敗しました",
         });
       }
     }),
