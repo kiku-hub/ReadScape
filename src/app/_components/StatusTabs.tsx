@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 
 const tabs = [
-  { id: "toRead", label: "To Read" },
-  { id: "inProgress", label: "In Progress" },
-  { id: "completed", label: "Read" },
-  { id: "all", label: "All" },
+  { id: "toRead", label: "読みたい" },
+  { id: "inProgress", label: "進行中" },
+  { id: "completed", label: "読んだ" },
+  { id: "all", label: "全記事" },
 ];
 
 const StatusTabs: React.FC = () => {
@@ -37,10 +37,10 @@ const StatusTabs: React.FC = () => {
       {/* Content Area */}
       <div className="from-gray-800 via-gray-900 to-black relative w-full max-w-3xl rounded-3xl bg-gradient-to-br p-8 shadow-2xl backdrop-blur-md">
         <div className="text-white animate-fadeSlideIn text-center text-xl font-medium transition-opacity duration-500">
-          {activeTab === "toRead" && "No articles to read"}
-          {activeTab === "inProgress" && "No articles in progress"}
-          {activeTab === "completed" && "No articles read"}
-          {activeTab === "all" && "All articles will be displayed here"}
+          {activeTab === "toRead" && "読みたい記事がありません"}
+          {activeTab === "inProgress" && "進行中の記事がありません"}
+          {activeTab === "completed" && "読んだ記事がありません"}
+          {activeTab === "all" && "全記事がここに表示されます"}
         </div>
       </div>
     </div>
