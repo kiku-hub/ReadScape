@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import type { ArticleDetails } from "~/server/api/routers/article";
+
+// APIレスポンスの型定義
+interface ArticleApiResponse {
+  title: string;
+  description: string;
+  image: string;
+  error?: {
+    message: string;
+    details?: string;
+  };
+}
 
 interface ModalProps {
   isOpen: boolean;
@@ -11,14 +22,68 @@ interface ModalProps {
   onSave: (status: string, comment: string) => void;
 }
 
+interface ArticleInfo {
+  title: string;
+  description: string;
+  image: string;
+}
+
 export default function Modal({
   isOpen,
   onClose,
   articleDetails,
   onSave,
 }: ModalProps) {
+  console.log("Modal props:", { isOpen, articleDetails });
   const [status, setStatus] = useState<string>("読みたい");
   const [comment, setComment] = useState<string>("");
+  const [articleInfo, setArticleInfo] = useState<ArticleInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchArticleInfo = async () => {
+      if (articleDetails?.url) {
+        setIsLoading(true);
+        try {
+          console.log("Fetching article info for:", articleDetails.url);
+          const response = await fetch("/api/fetch-article-info", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: articleDetails.url }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = (await response.json()) as ArticleApiResponse;
+          console.log("Received article info:", data);
+
+          if ("error" in data && data.error) {
+            console.error("記事情報の取得に失敗しました:", data.error.message);
+          } else {
+            setArticleInfo({
+              title: data.title ?? articleDetails.title,
+              description: data.description ?? "",
+              image: data.image ?? articleDetails.thumbnail ?? "",
+            });
+          }
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error occurred";
+          console.error("記事情報の取得に失敗しました:", errorMessage);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    if (isOpen && articleDetails) {
+      void fetchArticleInfo();
+    }
+  }, [isOpen, articleDetails]);
 
   if (!isOpen) return null;
 
@@ -62,9 +127,25 @@ export default function Modal({
             <>
               {/* 記事情報の表示 */}
               <div className="mb-8">
-                <h2 className="text-gray-800 mb-4 text-2xl font-bold">
-                  {articleDetails.title}
+                {(articleInfo?.image ?? articleDetails.thumbnail) && (
+                  <div className="mb-4 overflow-hidden rounded-xl">
+                    <Image
+                      src={articleInfo?.image ?? articleDetails.thumbnail ?? ""}
+                      alt={articleInfo?.title ?? articleDetails.title ?? ""}
+                      width={600}
+                      height={315}
+                      className="h-[200px] w-full object-cover transition-transform duration-300 hover:scale-105"
+                    />
+                  </div>
+                )}
+                <h2 className="text-gray-800 mb-4 line-clamp-2 text-xl font-bold">
+                  {articleInfo?.title ?? articleDetails.title}
                 </h2>
+                {articleInfo?.description && (
+                  <p className="text-gray-600 mb-4 line-clamp-3">
+                    {articleInfo.description}
+                  </p>
+                )}
                 <a
                   href={articleDetails.url}
                   target="_blank"
@@ -86,17 +167,6 @@ export default function Modal({
                     />
                   </svg>
                 </a>
-                {articleDetails.thumbnail && (
-                  <div className="mt-6 overflow-hidden rounded-xl">
-                    <Image
-                      src={articleDetails.thumbnail}
-                      alt={articleDetails.title}
-                      width={500}
-                      height={300}
-                      className="w-full object-cover transition-transform duration-300 hover:scale-105"
-                    />
-                  </div>
-                )}
               </div>
 
               {/* ステータス選択 */}
