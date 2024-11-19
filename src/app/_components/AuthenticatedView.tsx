@@ -4,63 +4,61 @@ import UrlInput from "./UrlInput";
 import StatusTabs from "./StatusTabs";
 import Modal from "./Modal";
 import type { ArticleDetails } from "~/server/api/routers/article";
+import { api } from "~/trpc/react";
 
 export default function AuthenticatedView() {
-  // 状態管理
   const [articleDetails, setArticleDetails] = useState<ArticleDetails | null>(
     null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // URLInput用のハンドラー
+  const { mutate: saveArticle } = api.article.save.useMutation({
+    onSuccess: () => {
+      handleModalClose();
+    },
+    onError: (error) => {
+      console.error("保存エラー:", error);
+    },
+  });
+
   const handleUrlSubmit = (details: ArticleDetails) => {
     setArticleDetails(details);
   };
 
-  // モーダル制御用のハンドラー
   const handleModalOpen = () => {
     setIsModalOpen(true);
   };
 
   const handleModalClose = () => {
     setIsModalOpen(false);
-    setArticleDetails(null); // モーダルを閉じる際にデータもクリア
+    setArticleDetails(null);
   };
 
-  // 記事保存用のハンドラー
-  const handleSave = async (status: string, comment: string) => {
+  const handleSave = async (status: string, memo: string) => {
     if (!articleDetails) return;
 
     try {
-      // TODO: 記事保存のAPI呼び出し
-      console.log("保存データ:", {
-        articleDetails,
-        status,
-        comment,
+      saveArticle({
+        url: articleDetails.url,
+        status: status as "WANT_TO_READ" | "IN_PROGRESS" | "COMPLETED",
+        memo: memo,
       });
-
-      // 保存成功時の処理
-      handleModalClose();
-      // TODO: 必要に応じて成功メッセージの表示やリストの更新
     } catch (error) {
       console.error("保存エラー:", error);
-      // TODO: エラーメッセージの表示
     }
   };
 
   return (
     <div className="flex min-h-screen flex-col items-center bg-gradient-to-br from-[#e6ffe9] to-[#c7f4d6]">
-      {/* URL入力フォーム */}
       <div className="w-full max-w-4xl px-4 py-8">
         <UrlInput onUrlSubmit={handleUrlSubmit} onModalOpen={handleModalOpen} />
+        <div className="mt-2">
+          {" "}
+          {/* mt-8 から mt-2 に変更 */}
+          <StatusTabs />
+        </div>
       </div>
 
-      {/* タブ表示部分 */}
-      <div className="mt-8 w-full max-w-4xl px-4">
-        <StatusTabs />
-      </div>
-
-      {/* モーダル */}
       <Modal
         isOpen={isModalOpen}
         onClose={handleModalClose}

@@ -46,12 +46,20 @@ export default {
       },
       keyframes: {
         fadeSlideIn: {
-          "0%": { opacity: 0, transform: "translateY(20px)" },
-          "100%": { opacity: 1, transform: "translateY(0)" },
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        fadeIn: {
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },
       animation: {
         fadeSlideIn: "fadeSlideIn 0.8s ease-out",
+        "spin-slow": "spin 3s linear infinite",
+        "spin-reverse": "spin 3s linear infinite reverse",
+        "pulse-slow": "pulse 2s infinite",
+        "fade-in": "fadeIn 1.5s ease-in-out",
       },
     },
   },

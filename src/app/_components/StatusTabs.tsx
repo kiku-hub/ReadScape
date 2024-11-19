@@ -13,7 +13,9 @@ const StatusTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState("toRead");
 
   return (
-    <div className="flex flex-col items-center space-y-8">
+    <div className="flex flex-col items-center space-y-4">
+      {" "}
+      {/* space-y-8 から space-y-4 に変更 */}
       {/* Tabs */}
       <div className="bg-gray-900/80 relative flex flex-wrap justify-center gap-4 rounded-full p-3 shadow-lg backdrop-blur-md">
         {tabs.map((tab) => (
@@ -33,7 +35,6 @@ const StatusTabs: React.FC = () => {
           </button>
         ))}
       </div>
-
       {/* Content Area */}
       <div className="from-gray-800 via-gray-900 to-black relative w-full max-w-3xl rounded-3xl bg-gradient-to-br p-8 shadow-2xl backdrop-blur-md">
         <div className="text-white animate-fadeSlideIn text-center text-xl font-medium transition-opacity duration-500">
