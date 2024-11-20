@@ -19,7 +19,7 @@ const urlInputSchema = z.object({
 
 const saveArticleSchema = z.object({
   url: z.string().url(),
-  status: z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED"]),
+  status: z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED", "ALL"]),
   memo: z.string().optional(),
 });
 
@@ -103,6 +103,42 @@ export const articleRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "記事の保存に失敗しました",
+        });
+      }
+    }),
+
+  getArticlesByStatus: protectedProcedure
+    .input(z.object({
+      status: z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED", "ALL"])
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const where = {
+          userId: ctx.session.user.id,
+          ...(input.status !== "ALL" ? { status: input.status } : {}),
+        };
+
+        const articles = await ctx.db.article.findMany({
+          where,
+          orderBy: {
+            createdAt: 'desc'
+          },
+          select: {
+            id: true,
+            url: true,
+            status: true,
+            memo: true,
+            createdAt: true,
+          }
+        });
+        return articles;
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error("Fetch error:", error.message);
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "記事の取得に失敗しました",
         });
       }
     }),
