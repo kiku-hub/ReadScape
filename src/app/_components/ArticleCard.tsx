@@ -1,7 +1,10 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import type { ArticleStatus } from "~/server/api/routers/article";
+import LoadingSpinner from "./LoadingSpinner";
 
 interface ArticleCardProps {
   id: string;
@@ -49,10 +52,11 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   onSave,
   onMetadataUpdate,
 }) => {
-  // State
   const [localMemo, setLocalMemo] = useState<string>(initialMemo ?? "");
   const [localStatus, setLocalStatus] = useState<ArticleStatus>(initialStatus);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [metadata, setMetadata] = useState<Metadata>({
     title: initialTitle ?? url,
@@ -60,7 +64,6 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
     image: initialImage ?? "",
   });
 
-  // Effects
   useEffect(() => {
     setLocalMemo(initialMemo ?? "");
     setLocalStatus(initialStatus);
@@ -112,7 +115,6 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
     initialImage,
   ]);
 
-  // Event Handlers
   const handleMemoChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setLocalMemo(e.target.value);
     setHasChanges(true);
@@ -132,21 +134,47 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   const handleSave = async () => {
     if (hasChanges) {
       try {
+        setIsSaving(true);
         await onSave(id, localMemo, localStatus);
         setHasChanges(false);
       } catch (error) {
         console.error("保存中にエラーが発生しました:", error);
+      } finally {
+        setIsSaving(false);
       }
     }
   };
 
   const handleDelete = async () => {
+    if (isDeleting) return;
     try {
+      setIsDeleting(true);
       await onDelete(id);
     } catch (error) {
       console.error("削除中にエラーが発生しました:", error);
+      setIsDeleting(false);
     }
   };
+
+  if (isDeleting) {
+    return (
+      <div className="relative flex h-[200px] rounded-lg bg-white p-4 shadow-sm">
+        <div className="flex w-full items-center justify-center">
+          <LoadingSpinner message="削除中..." />
+        </div>
+      </div>
+    );
+  }
+
+  if (isSaving) {
+    return (
+      <div className="relative flex h-[200px] rounded-lg bg-white p-4 shadow-sm">
+        <div className="flex w-full items-center justify-center">
+          <LoadingSpinner message="保存中..." />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex rounded-lg bg-white p-4 shadow-sm">
@@ -212,9 +240,9 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
           <button
             onClick={() => void handleSave()}
-            disabled={!hasChanges}
+            disabled={!hasChanges || isSaving}
             className={`rounded px-4 py-2 text-white transition-colors duration-200 ${
-              hasChanges
+              hasChanges && !isSaving
                 ? "bg-blue-500 hover:bg-blue-600"
                 : "cursor-not-allowed bg-gray-400"
             }`}

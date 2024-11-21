@@ -5,7 +5,6 @@ import Image from "next/image";
 import type { ArticleDetails } from "~/server/api/routers/article";
 import LoadingSpinner from "./LoadingSpinner";
 
-// APIレスポンスの型定義
 interface ArticleApiResponse {
   title: string;
   description: string;
@@ -25,7 +24,6 @@ interface ModalProps {
 
 interface ArticleInfo {
   title: string;
-  description: string;
   image: string;
 }
 
@@ -65,7 +63,6 @@ export default function Modal({
           } else {
             setArticleInfo({
               title: data.title ?? "タイトルなし",
-              description: data.description ?? "",
               image: data.image ?? "",
             });
           }
@@ -96,9 +93,9 @@ export default function Modal({
     try {
       setIsSaving(true);
       await onSave(status, memo);
-      // 保存完了後、少し待ってからモーダルを閉じる
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       handleClose();
+      window.location.reload();
     } catch (error) {
       console.error("保存中にエラーが発生しました:", error);
     } finally {
@@ -109,7 +106,6 @@ export default function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm transition-all duration-300">
       <div className="relative w-full max-w-2xl transform overflow-hidden rounded-3xl bg-white shadow-lg transition-all duration-300">
-        {/* 閉じるボタン */}
         <button
           onClick={handleClose}
           className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-all duration-200 hover:bg-gray-300 hover:text-gray-700"
@@ -139,51 +135,31 @@ export default function Modal({
             </div>
           ) : articleDetails ? (
             <>
-              {/* 記事情報の表示 */}
               <div className="mb-8">
-                {articleInfo?.image && (
-                  <div className="mb-4 overflow-hidden rounded-xl">
-                    <Image
-                      src={articleInfo.image}
-                      alt={articleInfo.title}
-                      width={600}
-                      height={315}
-                      className="h-[200px] w-full object-cover transition-transform duration-300 hover:scale-105"
-                    />
-                  </div>
-                )}
-                <h2 className="mb-4 line-clamp-2 text-xl font-bold text-gray-800">
-                  {articleInfo?.title ?? "タイトルなし"}
-                </h2>
-                {articleInfo?.description && (
-                  <p className="mb-4 line-clamp-3 text-gray-600">
-                    {articleInfo.description}
-                  </p>
-                )}
                 <a
                   href={articleDetails.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center text-blue-500 hover:underline"
+                  className="group block"
                 >
-                  記事を開く
-                  <svg
-                    className="ml-2 h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
+                  {articleInfo?.image && (
+                    <div className="mb-4 overflow-hidden rounded-xl">
+                      <div className="relative h-48 w-full transition-transform duration-300 group-hover:scale-105">
+                        <Image
+                          src={articleInfo.image}
+                          alt={articleInfo.title}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <h2 className="mb-4 line-clamp-2 text-xl font-bold text-gray-800 transition-colors duration-200 hover:text-blue-600">
+                    {articleInfo?.title ?? "タイトルなし"}
+                  </h2>
                 </a>
               </div>
 
-              {/* ステータス選択 */}
               <div className="mb-6">
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   ステータス
@@ -199,7 +175,6 @@ export default function Modal({
                 </select>
               </div>
 
-              {/* メモ入力 */}
               <div className="mb-8">
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   メモ
@@ -213,7 +188,6 @@ export default function Modal({
                 />
               </div>
 
-              {/* 保存ボタン */}
               <div className="flex justify-end">
                 <button
                   onClick={() => void handleSave()}
