@@ -30,7 +30,6 @@ const StatusTabs: React.FC = () => {
     api.article.getArticlesByStatus.useQuery(
       { status: activeTab },
       {
-        enabled: activeTab !== "ALL",
         retry: false,
       },
     );
@@ -55,20 +54,42 @@ const StatusTabs: React.FC = () => {
     },
   });
 
-  const handleSave = (
+  const handleSave = async (
     id: string,
     memo: string,
     status: ArticleStatus,
-  ): void => {
-    updateArticle({
-      id,
-      memo,
-      status,
-    });
+  ): Promise<void> => {
+    try {
+      await new Promise<void>((resolve) => {
+        updateArticle(
+          {
+            id,
+            memo,
+            status,
+          },
+          {
+            onSuccess: () => resolve(),
+          },
+        );
+      });
+    } catch (error) {
+      console.error("Failed to update article:", error);
+    }
   };
 
-  const handleDelete = (id: string): void => {
-    deleteArticle({ id });
+  const handleDelete = async (id: string): Promise<void> => {
+    try {
+      await new Promise<void>((resolve) => {
+        deleteArticle(
+          { id },
+          {
+            onSuccess: () => resolve(),
+          },
+        );
+      });
+    } catch (error) {
+      console.error("Failed to delete article:", error);
+    }
   };
 
   const renderContent = () => {
@@ -82,7 +103,7 @@ const StatusTabs: React.FC = () => {
           {activeTab === "WANT_TO_READ" && "未読の記事がありません"}
           {activeTab === "IN_PROGRESS" && "読書中の記事がありません"}
           {activeTab === "COMPLETED" && "読了した記事がありません"}
-          {activeTab === "ALL" && "全記事がここに表示されます"}
+          {activeTab === "ALL" && "記事がありません"}
         </div>
       );
     }

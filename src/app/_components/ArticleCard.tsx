@@ -11,8 +11,8 @@ interface ArticleCardProps {
   status: ArticleStatus;
   image?: string;
   memo: string;
-  onDelete?: (id: string) => void;
-  onSave: (id: string, memo: string, status: ArticleStatus) => void;
+  onDelete: (id: string) => Promise<void>;
+  onSave: (id: string, memo: string, status: ArticleStatus) => Promise<void>;
   onMetadataUpdate?: (id: string, metadata: Metadata) => void;
 }
 
@@ -32,9 +32,9 @@ interface ApiResponse {
 }
 
 const STATUS_MAP: Record<ArticleStatus, string> = {
-  WANT_TO_READ: "読みたい",
-  IN_PROGRESS: "進行中",
-  COMPLETED: "読んだ",
+  WANT_TO_READ: "未読",
+  IN_PROGRESS: "読書中",
+  COMPLETED: "読了",
 } as const;
 
 export const ArticleCard: React.FC<ArticleCardProps> = ({
@@ -129,14 +129,24 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (hasChanges) {
-      onSave(id, localMemo, localStatus);
-      setHasChanges(false);
+      try {
+        await onSave(id, localMemo, localStatus);
+        setHasChanges(false);
+      } catch (error) {
+        console.error("保存中にエラーが発生しました:", error);
+      }
     }
   };
 
-  const handleDelete = () => onDelete?.(id);
+  const handleDelete = async () => {
+    try {
+      await onDelete(id);
+    } catch (error) {
+      console.error("削除中にエラーが発生しました:", error);
+    }
+  };
 
   return (
     <div className="relative flex rounded-lg bg-white p-4 shadow-sm">
@@ -158,16 +168,14 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
       {/* 右側：コンテンツエリア */}
       <div className="flex-1">
-        {onDelete && (
-          <div className="absolute right-2 top-2">
-            <button
-              onClick={handleDelete}
-              className="text-gray-400 hover:text-red-500"
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
-          </div>
-        )}
+        <div className="absolute right-2 top-2">
+          <button
+            onClick={() => void handleDelete()}
+            className="text-gray-400 hover:text-red-500"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
 
         <h3 className="mb-3 text-lg font-semibold text-gray-900">
           <a
@@ -203,12 +211,12 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
           </select>
 
           <button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             disabled={!hasChanges}
             className={`rounded px-4 py-2 text-white transition-colors duration-200 ${
               hasChanges
                 ? "bg-blue-500 hover:bg-blue-600"
-                : "bg-gray-400 cursor-not-allowed"
+                : "cursor-not-allowed bg-gray-400"
             }`}
           >
             保存
