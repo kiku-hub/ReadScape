@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { api } from "~/trpc/react";
 import LoadingSpinner from "./LoadingSpinner";
 import { ArticleCard } from "./ArticleCard";
+import Pagination from "./Pagination";
 
 interface Article {
   id: string;
@@ -24,6 +25,9 @@ type ArticleStatus = "WANT_TO_READ" | "IN_PROGRESS" | "COMPLETED";
 
 const StatusTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>("WANT_TO_READ");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5; // 1ページあたり5件表示
+
   const utils = api.useContext();
 
   const { data: articles = [], isLoading } =
@@ -33,6 +37,28 @@ const StatusTabs: React.FC = () => {
         retry: false,
       },
     );
+
+  // ページネーション用の記事配列を取得
+  const getCurrentPageItems = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return articles.slice(startIndex, endIndex);
+  };
+
+  // 総ページ数を計算
+  const totalPages = Math.ceil(articles.length / itemsPerPage);
+
+  // タブ切り替え時にページをリセット
+  const handleTabChange = (tabId: TabId) => {
+    setActiveTab(tabId);
+    setCurrentPage(1);
+  };
+
+  // ページ変更ハンドラー
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const { mutate: updateArticle } = api.article.update.useMutation({
     onSuccess: async () => {
@@ -109,21 +135,32 @@ const StatusTabs: React.FC = () => {
     }
 
     return (
-      <div className="space-y-4">
-        {articles.map((article: Article) => (
-          <ArticleCard
-            key={article.id}
-            id={article.id}
-            url={article.url}
-            title={article.url}
-            description={article.memo ?? ""}
-            status={article.status as ArticleStatus}
-            memo={article.memo ?? ""}
-            onSave={handleSave}
-            onDelete={handleDelete}
-          />
-        ))}
-      </div>
+      <>
+        <div className="space-y-4">
+          {getCurrentPageItems().map((article: Article) => (
+            <ArticleCard
+              key={article.id}
+              id={article.id}
+              url={article.url}
+              title={article.url}
+              description={article.memo ?? ""}
+              status={article.status as ArticleStatus}
+              memo={article.memo ?? ""}
+              onSave={handleSave}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+        {articles.length > itemsPerPage && (
+          <div className="mt-8">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
+      </>
     );
   };
 
@@ -138,7 +175,7 @@ const StatusTabs: React.FC = () => {
                 ? "bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-pink-500/40 hover:scale-110"
                 : "bg-white text-gray-600 hover:text-gray-900 hover:shadow-lg hover:shadow-gray-500/30"
             }`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
           >
             {tab.label}
             {activeTab === tab.id && (

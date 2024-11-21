@@ -79,7 +79,6 @@ const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
       setError(null);
       getArticleDetails({ url });
     } catch {
-      // _を削除
       setError("有効なURLを入力してください");
     }
   };
