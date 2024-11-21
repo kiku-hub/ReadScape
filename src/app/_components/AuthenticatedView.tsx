@@ -49,12 +49,10 @@ export default function AuthenticatedView() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-gradient-to-br from-[#e6ffe9] to-[#c7f4d6]">
+    <div className="bg-white flex min-h-screen flex-col items-center">
       <div className="w-full max-w-4xl px-4 py-8">
         <UrlInput onUrlSubmit={handleUrlSubmit} onModalOpen={handleModalOpen} />
         <div className="mt-2">
-          {" "}
-          {/* mt-8 から mt-2 に変更 */}
           <StatusTabs />
         </div>
       </div>

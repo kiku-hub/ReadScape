@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
-import { SessionProvider } from "next-auth/react"; // セッションプロバイダーをインポート
+import { SessionProvider } from "next-auth/react";
 import { TRPCReactProvider } from "~/trpc/react";
 import NavBar from "./_components/NavBar";
 
@@ -15,14 +15,12 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${GeistSans.variable}`}>
-      <body>
+    <html lang="en" className={`${GeistSans.variable} bg-white`}>
+      <body className="bg-white min-h-screen">
         <SessionProvider>
-          {" "}
-          {/* ここでセッションプロバイダーを追加 */}
           <TRPCReactProvider>
             <NavBar />
-            {children}
+            <main className="bg-white">{children}</main>
           </TRPCReactProvider>
         </SessionProvider>
       </body>

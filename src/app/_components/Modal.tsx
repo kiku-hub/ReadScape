@@ -193,8 +193,8 @@ export default function Modal({
                   onChange={(e) => setStatus(e.target.value)}
                   className="block w-full rounded-lg border-gray-300 bg-gray-50 p-3 text-gray-700 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
                 >
-                  <option value="WANT_TO_READ">読みたい</option>
-                  <option value="IN_PROGRESS">読んでいる</option>
+                  <option value="WANT_TO_READ">未読</option>
+                  <option value="IN_PROGRESS">読書中</option>
                   <option value="COMPLETED">読了</option>
                 </select>
               </div>

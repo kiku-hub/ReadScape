@@ -6,6 +6,10 @@ import {
   protectedProcedure,
 } from "~/server/api/trpc";
 
+// ArticleStatus の型定義を追加
+export const articleStatusSchema = z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED"]);
+export type ArticleStatus = z.infer<typeof articleStatusSchema>;
+
 export const articleDetailsSchema = z.object({
   title: z.string().min(1, "タイトルは必須です"),
   url: z.string().url("有効なURLを入力してください"),
@@ -21,6 +25,12 @@ const saveArticleSchema = z.object({
   url: z.string().url(),
   status: z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED", "ALL"]),
   memo: z.string().optional(),
+});
+
+const updateArticleSchema = z.object({
+  id: z.string(),
+  memo: z.string(),
+  status: articleStatusSchema, // 既存のスキーマを使用
 });
 
 export type ArticleDetails = z.infer<typeof articleDetailsSchema>;
@@ -108,9 +118,11 @@ export const articleRouter = createTRPCRouter({
     }),
 
   getArticlesByStatus: protectedProcedure
-    .input(z.object({
-      status: z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED", "ALL"])
-    }))
+    .input(
+      z.object({
+        status: z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED", "ALL"]),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       try {
         const where = {
@@ -121,7 +133,7 @@ export const articleRouter = createTRPCRouter({
         const articles = await ctx.db.article.findMany({
           where,
           orderBy: {
-            createdAt: 'desc'
+            createdAt: "desc",
           },
           select: {
             id: true,
@@ -129,7 +141,7 @@ export const articleRouter = createTRPCRouter({
             status: true,
             memo: true,
             createdAt: true,
-          }
+          },
         });
         return articles;
       } catch (error) {
@@ -139,6 +151,54 @@ export const articleRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "記事の取得に失敗しました",
+        });
+      }
+    }),
+
+  update: protectedProcedure
+    .input(updateArticleSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const article = await ctx.db.article.update({
+          where: {
+            id: input.id,
+            userId: ctx.session.user.id,
+          },
+          data: {
+            memo: input.memo,
+            status: input.status,
+          },
+        });
+        return article;
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error("Update error:", error.message);
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "記事の更新に失敗しました",
+        });
+      }
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await ctx.db.article.delete({
+          where: {
+            id: input.id,
+            userId: ctx.session.user.id,
+          },
+        });
+        return { success: true };
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error("Delete error:", error.message);
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "記事の削除に失敗しました",
         });
       }
     }),
