@@ -3,7 +3,8 @@ import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
 import { TRPCReactProvider } from "~/trpc/react";
-import NavBar from "./_components/NavBar";
+import Logo from "~/app/_components/Logo";
+import Signout from "~/app/_components/Signout";
 
 export const metadata: Metadata = {
   title: "Read Scape",
@@ -19,7 +20,8 @@ export default function RootLayout({
       <body className="bg-white min-h-screen">
         <SessionProvider>
           <TRPCReactProvider>
-            <NavBar />
+            <Logo />
+            <Signout />
             <main className="bg-white">{children}</main>
           </TRPCReactProvider>
         </SessionProvider>

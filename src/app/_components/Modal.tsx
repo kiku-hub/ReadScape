@@ -144,7 +144,7 @@ export default function Modal({
                 >
                   {articleInfo?.image && (
                     <div className="mb-4 overflow-hidden rounded-xl">
-                      <div className="relative h-48 w-full transition-transform duration-300 group-hover:scale-105">
+                      <div className="relative mx-auto h-48 w-3/4 transition-transform duration-300 group-hover:scale-105">
                         <Image
                           src={articleInfo.image}
                           alt={articleInfo.title}

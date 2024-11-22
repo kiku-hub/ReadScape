@@ -75,9 +75,13 @@ const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
     }
 
     try {
-      new URL(url);
+      const urlObject = new URL(url);
+      if (!['http:', 'https:'].includes(urlObject.protocol)) {
+        setError("HTTPまたはHTTPSのURLを入力してください");
+        return;
+      }
       setError(null);
-      getArticleDetails({ url });
+      getArticleDetails({ url: urlObject.href });
     } catch {
       setError("有効なURLを入力してください");
     }
