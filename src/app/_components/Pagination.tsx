@@ -29,8 +29,8 @@ const Pagination: React.FC<PaginationProps> = ({
     }
 
     // 最後のページを追加
-    if (pages[pages.length - 1] !== totalPages - 1) {
-      if (pages[pages.length - 1] !== -1) {
+    if (totalPages > 1 && pages[pages.length - 1] !== totalPages) {
+      if (pages[pages.length - 1] !== totalPages - 1) {
         pages.push(-1); // 省略記号用
       }
       pages.push(totalPages);
@@ -44,7 +44,7 @@ const Pagination: React.FC<PaginationProps> = ({
   return (
     <div className="flex items-center justify-center gap-2 py-4">
       <button
-        onClick={() => onPageChange(currentPage - 1)}
+        onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
       >
@@ -52,7 +52,7 @@ const Pagination: React.FC<PaginationProps> = ({
       </button>
 
       {getPageNumbers().map((pageNum, index) => (
-        <React.Fragment key={index}>
+        <React.Fragment key={`page-${pageNum}-${index}`}>
           {pageNum === -1 ? (
             <span className="px-2 text-gray-500">...</span>
           ) : (
@@ -71,7 +71,7 @@ const Pagination: React.FC<PaginationProps> = ({
       ))}
 
       <button
-        onClick={() => onPageChange(currentPage + 1)}
+        onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
       >

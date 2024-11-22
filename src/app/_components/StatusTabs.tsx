@@ -26,7 +26,7 @@ type ArticleStatus = "WANT_TO_READ" | "IN_PROGRESS" | "COMPLETED";
 const StatusTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>("WANT_TO_READ");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5; // 1ページあたり5件表示
+  const itemsPerPage = 10; // 1ページあたり6件表示（2列×3行）
 
   const utils = api.useContext();
 
@@ -136,19 +136,20 @@ const StatusTabs: React.FC = () => {
 
     return (
       <>
-        <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-6">
           {getCurrentPageItems().map((article: Article) => (
-            <ArticleCard
-              key={article.id}
-              id={article.id}
-              url={article.url}
-              title={article.url}
-              description={article.memo ?? ""}
-              status={article.status as ArticleStatus}
-              memo={article.memo ?? ""}
-              onSave={handleSave}
-              onDelete={handleDelete}
-            />
+            <div key={article.id} className="w-full">
+              <ArticleCard
+                id={article.id}
+                url={article.url}
+                title={article.url}
+                description={article.memo ?? ""}
+                status={article.status as ArticleStatus}
+                memo={article.memo ?? ""}
+                onSave={handleSave}
+                onDelete={handleDelete}
+              />
+            </div>
           ))}
         </div>
         {articles.length > itemsPerPage && (
@@ -165,7 +166,7 @@ const StatusTabs: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center space-y-4">
+    <div className="fixed top-40 left-0 right-0 flex flex-col items-center space-y-4 z-30 h-[calc(100vh-160px)]">
       <div className="relative flex flex-wrap justify-center gap-4 rounded-full bg-gray-100 p-3 shadow-lg">
         {tabs.map((tab) => (
           <button
@@ -182,7 +183,7 @@ const StatusTabs: React.FC = () => {
         ))}
       </div>
 
-      <div className="relative w-full max-w-3xl rounded-3xl bg-white p-8 shadow-md">
+      <div className="relative w-full max-w-[1440px] rounded-3xl bg-white p-8 shadow-md overflow-y-auto flex-1 mx-4">
         <div className="animate-fadeSlideIn transition-opacity duration-500">
           {renderContent()}
         </div>

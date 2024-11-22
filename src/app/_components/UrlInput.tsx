@@ -104,7 +104,7 @@ const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
   }, [handleOutsideClick]);
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="fixed top-18 left-0 right-0 flex flex-col items-center z-40">
       <div
         id="url-input-container"
         style={{
