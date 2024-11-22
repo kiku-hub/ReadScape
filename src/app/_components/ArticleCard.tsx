@@ -158,7 +158,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
   if (isDeleting) {
     return (
-      <div className="relative h-[240px] w-full rounded-lg bg-white p-4 shadow-sm">
+      <div className="relative h-[240px] sm:h-[240px] w-full rounded-lg bg-white p-4 shadow-sm">
         <div className="flex h-full w-full items-center justify-center">
           <LoadingSpinner message="削除中..." />
         </div>
@@ -168,7 +168,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
   if (isSaving) {
     return (
-      <div className="relative h-[240px] w-full rounded-lg bg-white p-4 shadow-sm">
+      <div className="relative h-[240px] sm:h-[240px] w-full rounded-lg bg-white p-4 shadow-sm">
         <div className="flex h-full w-full items-center justify-center">
           <LoadingSpinner message="保存中..." />
         </div>
@@ -177,13 +177,13 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   }
 
   return (
-    <div className="relative h-[240px] w-full rounded-lg bg-white p-4 shadow-sm">
-      <div className="flex h-full">
+    <div className="relative h-auto sm:h-[240px] w-full rounded-lg bg-white p-3 sm:p-4 shadow-sm">
+      <div className="flex h-full flex-col sm:flex-row">
         {/* 左側：画像エリア */}
-        <div className="mr-4 w-1/3">
+        <div className="mb-3 sm:mb-0 sm:mr-4 w-full sm:w-1/3">
           {metadata.image && (
             <a href={url} target="_blank" rel="noopener noreferrer">
-              <div className="relative h-28 overflow-hidden rounded-lg">
+              <div className="relative h-40 sm:h-28 overflow-hidden rounded-lg">
                 <Image
                   src={metadata.image}
                   alt={metadata.title}
@@ -206,7 +206,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
             </button>
           </div>
 
-          <h3 className="mb-2 line-clamp-2 text-lg font-semibold text-gray-900">
+          <h3 className="mb-2 line-clamp-2 text-base sm:text-lg font-semibold text-gray-900">
             <a
               href={url}
               target="_blank"
@@ -221,16 +221,16 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
             <textarea
               value={localMemo}
               onChange={handleMemoChange}
-              className="h-16 w-full resize-none rounded border border-gray-200 bg-white p-3 text-gray-900"
+              className="h-20 sm:h-16 w-full resize-none rounded border border-gray-200 bg-white p-2 sm:p-3 text-sm sm:text-base text-gray-900"
               placeholder="メモを入力..."
             />
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <select
               value={STATUS_MAP[localStatus]}
               onChange={handleStatusChange}
-              className="rounded border border-gray-200 bg-white px-3 py-2 text-gray-900"
+              className="rounded border border-gray-200 bg-white px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base text-gray-900"
             >
               {Object.entries(STATUS_MAP).map(([key, label]) => (
                 <option key={key} value={label}>
@@ -242,7 +242,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
             <button
               onClick={() => void handleSave()}
               disabled={!hasChanges || isSaving}
-              className={`rounded px-4 py-2 text-white transition-colors duration-200 ${
+              className={`rounded px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base text-white transition-colors duration-200 ${
                 hasChanges && !isSaving
                   ? "bg-blue-500 hover:bg-blue-600"
                   : "cursor-not-allowed bg-gray-400"

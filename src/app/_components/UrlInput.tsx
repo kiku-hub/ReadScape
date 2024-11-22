@@ -5,11 +5,9 @@ import { api } from "~/trpc/react";
 import type { ArticleDetails } from "~/server/api/routers/article";
 import { z } from "zod";
 
-// 定数定義
 const PLACEHOLDER_TEXT = "記事のURLを入力してください";
 const ARIA_LABEL = "記事を追加";
 
-// 入力データの検証スキーマ
 const articleDataSchema = z.object({
   title: z.string(),
   url: z.string().url(),
@@ -27,12 +25,10 @@ const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // tRPCクエリの設定
   const { mutate: getArticleDetails, isPending: isSubmitting } =
     api.article.getArticleDetails.useMutation({
       onSuccess: (data) => {
         try {
-          // データの検証
           const validatedData = articleDataSchema.parse(data);
           const safeData: ArticleDetails = {
             title: validatedData.title,
@@ -104,27 +100,16 @@ const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
   }, [handleOutsideClick]);
 
   return (
-    <div className="fixed top-18 left-0 right-0 flex flex-col items-center z-40">
+    <div className="fixed top-22 left-0 right-0 flex flex-col items-center z-40 px-4 md:px-0">
       <div
         id="url-input-container"
+        className="flex items-center justify-center w-full max-w-[600px] mx-auto my-5 bg-gradient-to-r from-white to-gray-50 rounded-full shadow-lg transition-shadow duration-300 px-3 md:px-5 py-2 md:py-3 gap-2 md:gap-4"
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "100%",
-          maxWidth: "600px",
-          margin: "20px auto",
-          background: "linear-gradient(135deg, #ffffff, #f3f4f6)",
-          borderRadius: "50px",
           boxShadow: isActive
             ? "0 0 10px 3px rgba(59, 130, 246, 0.8)"
             : error
               ? "0 0 10px 3px rgba(239, 68, 68, 0.5)"
               : "0 10px 20px rgba(0, 0, 0, 0.1)",
-          padding: "10px 20px",
-          gap: "10px",
-          position: "relative",
-          transition: "box-shadow 0.3s ease",
         }}
       >
         <input
@@ -135,19 +120,9 @@ const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
           onKeyPress={handleKeyPress}
           placeholder={PLACEHOLDER_TEXT}
           disabled={isSubmitting}
-          style={{
-            flex: 1,
-            backgroundColor: "#ffffff",
-            border: error ? "1px solid rgba(239, 68, 68, 0.5)" : "none",
-            borderRadius: "50px",
-            padding: "10px 20px",
-            fontSize: "16px",
-            color: "#4a5568",
-            outline: "none",
-            boxShadow: "inset 0 2px 5px rgba(0, 0, 0, 0.1)",
-            transition: "all 0.3s ease",
-            opacity: isSubmitting ? 0.7 : 1,
-          }}
+          className={`flex-1 bg-white rounded-full py-2 md:py-3 px-4 md:px-6 text-sm md:text-base text-gray-600 outline-none shadow-inner transition-all duration-300 ${
+            error ? "border border-red-400" : "border-none"
+          } ${isSubmitting ? "opacity-70" : "opacity-100"}`}
           onFocus={(e) => {
             e.currentTarget.style.backgroundColor = "#f9fafb";
             setError(null);
@@ -160,47 +135,18 @@ const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
           onClick={() => void handleAddClick()}
           aria-label={ARIA_LABEL}
           disabled={isSubmitting}
-          style={{
-            background: "linear-gradient(135deg, #06b6d4, #3b82f6)",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "50%",
-            width: "50px",
-            height: "50px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 6px 12px rgba(59, 130, 246, 0.5)",
-            cursor: isSubmitting ? "not-allowed" : "pointer",
-            transition: "transform 0.3s ease, box-shadow 0.3s ease",
-            opacity: isSubmitting ? 0.7 : 1,
-          }}
-          onMouseEnter={(e) => {
-            if (!isSubmitting) {
-              e.currentTarget.style.transform = "scale(1.1)";
-              e.currentTarget.style.boxShadow =
-                "0 8px 16px rgba(59, 130, 246, 0.6)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isSubmitting) {
-              e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.boxShadow =
-                "0 6px 12px rgba(59, 130, 246, 0.5)";
-            }
-          }}
+          className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg transition-all duration-300 ${
+            isSubmitting
+              ? "cursor-not-allowed opacity-70"
+              : "cursor-pointer hover:scale-110 hover:shadow-xl"
+          }`}
         >
           {isSubmitting ? "..." : "+"}
         </button>
       </div>
 
       {error && (
-        <div
-          className="text-red-500 mt-2 text-sm"
-          style={{
-            animation: "fadeIn 0.3s ease-in-out",
-          }}
-        >
+        <div className="text-red-500 mt-2 text-xs md:text-sm animate-fadeIn">
           {error}
         </div>
       )}
