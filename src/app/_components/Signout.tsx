@@ -29,7 +29,8 @@ export default function Signout() {
             textTransform: 'none',
             boxShadow: '0 2px 8px rgba(76, 175, 80, 0.1)',
             padding: '4px 12px',
-            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            fontSize: { xs: '0.875rem', sm: '1.25rem' }, // Logoと同じサイズに
+            fontWeight: 'bold', // Logoと同じ太さに
             backgroundColor: '#4caf50',
             transition: 'all 0.3s ease',
             backdropFilter: 'blur(8px)',
@@ -39,16 +40,16 @@ export default function Signout() {
             background: 'rgba(255, 255, 255, 0.3)',
             position: 'relative',
             overflow: 'hidden',
-            color: 'text.primary', // テキストカラーを黒に変更
+            color: 'text.primary',
             '& .MuiButton-startIcon': {
               margin: { xs: '0', sm: '0 8px 0 0' },
-              color: 'text.primary', // アイコンの色も黒に変更
+              color: 'text.primary',
             },
             '& .MuiSvgIcon-root': {
-              fontSize: { xs: '1.1rem', sm: '1.25rem' },
+              fontSize: { xs: '1.1rem', sm: '1.5rem' }, // アイコンサイズも調整
               zIndex: 10,
               transition: 'transform 0.3s ease',
-              color: 'text.primary', // アイコンの色も黒に変更
+              color: 'text.primary',
             },
             '&::before': {
               content: '""',
@@ -76,7 +77,7 @@ export default function Signout() {
               backgroundColor: 'rgba(255, 255, 255, 0.5)',
               border: '1px solid rgba(76, 175, 80, 0.2)',
               letterSpacing: '0.5px',
-              color: 'text.primary', // ホバー時も黒を維持
+              color: 'text.primary',
               '&::before': {
                 opacity: 1,
               },
@@ -85,7 +86,7 @@ export default function Signout() {
               },
               '& .MuiSvgIcon-root': {
                 transform: 'scale(1.05)',
-                color: 'text.primary', // ホバー時も黒を維持
+                color: 'text.primary',
               },
             },
             '&:active': {
