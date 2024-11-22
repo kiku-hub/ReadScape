@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { TRPCReactProvider } from "~/trpc/react";
 import Logo from "~/app/_components/Logo";
 import Signout from "~/app/_components/Signout";
+import SearchModal from "~/app/_components/SearchModal";
 
 export const metadata: Metadata = {
   title: "Read Scape",
@@ -21,6 +22,7 @@ export default function RootLayout({
         <SessionProvider>
           <TRPCReactProvider>
             <Logo />
+            <SearchModal />
             <Signout />
             <main className="bg-white">{children}</main>
           </TRPCReactProvider>

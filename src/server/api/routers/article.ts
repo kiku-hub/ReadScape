@@ -30,7 +30,7 @@ const saveArticleSchema = z.object({
 const updateArticleSchema = z.object({
   id: z.string(),
   memo: z.string(),
-  status: articleStatusSchema, // 既存のスキーマを使用
+  status: articleStatusSchema,
 });
 
 export type ArticleDetails = z.infer<typeof articleDetailsSchema>;
@@ -151,6 +151,41 @@ export const articleRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "記事の取得に失敗しました",
+        });
+      }
+    }),
+
+  searchArticles: protectedProcedure
+    .input(z.object({ query: z.string() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const articles = await ctx.db.article.findMany({
+          where: {
+            userId: ctx.session.user.id,
+            OR: [
+              { url: { contains: input.query, mode: 'insensitive' } },
+              { memo: { contains: input.query, mode: 'insensitive' } },
+            ],
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            id: true,
+            url: true,
+            status: true,
+            memo: true,
+            createdAt: true,
+          },
+        });
+        return articles;
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error("Search error:", error.message);
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "記事の検索に失敗しました",
         });
       }
     }),
