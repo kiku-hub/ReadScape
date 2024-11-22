@@ -178,9 +178,6 @@ const StatusTabs: React.FC = () => {
             onClick={() => handleTabChange(tab.id)}
           >
             {tab.label}
-            {activeTab === tab.id && (
-              <span className="absolute -bottom-1 left-1/2 h-1 w-3/4 -translate-x-1/2 rounded-full bg-gradient-to-r from-pink-500 to-blue-500 transition-transform duration-300" />
-            )}
           </button>
         ))}
       </div>
