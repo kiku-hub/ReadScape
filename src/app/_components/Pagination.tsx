@@ -15,7 +15,6 @@ const Pagination: React.FC<PaginationProps> = ({
 }) => {
   const getPageNumbers = () => {
     const pages = [];
-    const showPages = 5; // 表示するページ番号の数
 
     // 最初のページを追加
     pages.push(1);
