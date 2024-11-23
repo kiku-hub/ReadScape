@@ -195,18 +195,18 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
           )}
         </div>
 
-        {/* 右側：コンテンツエリア */}
+         {/* 右側：コンテンツエリア */}
         <div className="flex flex-1 flex-col">
-          <div className="absolute right-2 top-2">
+          <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
             <button
               onClick={() => void handleDelete()}
-              className="text-gray-400 hover:text-red-500"
+              className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-red-500 transition-colors duration-200"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
 
-          <h3 className="mb-2 line-clamp-2 text-base sm:text-lg font-semibold text-gray-900">
+          <h3 className="mb-2 mt-1 pr-12 line-clamp-2 text-base sm:text-lg font-semibold text-gray-900">
             <a
               href={url}
               target="_blank"
