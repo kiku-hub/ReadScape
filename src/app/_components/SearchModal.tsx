@@ -22,11 +22,13 @@ const Modal = dynamic(
 
 interface SearchResult {
   id: string;
-  status: string;
+  status: "WANT_TO_READ" | "IN_PROGRESS" | "COMPLETED";
   createdAt: Date;
   url: string;
-  title: string; // titleプロパティを追加
+  title: string | null;
   memo: string | null;
+  description: string | null;  // 追加
+  image: string | null;        // 追加
 }
 
 export default function SearchModal() {
@@ -169,7 +171,7 @@ export default function SearchModal() {
                   id={article.id}
                   url={article.url}
                   title={article.title}
-                  status={article.status as ArticleStatus}
+                  status={article.status}
                   memo={article.memo ?? ""}
                   onDelete={handleDelete}
                   onSave={handleSave}

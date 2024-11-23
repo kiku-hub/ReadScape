@@ -2,41 +2,67 @@
 
 import React, { useState } from "react";
 import { api } from "~/trpc/react";
+import { useSession } from "next-auth/react"; // 追加
 import LoadingSpinner from "./LoadingSpinner";
 import { ArticleCard } from "./ArticleCard";
 import Pagination from "./Pagination";
+import type { ArticleStatus, StatusType } from "~/server/api/routers/article";
 
 interface Article {
   id: string;
   url: string;
+  title: string | null;
+  description: string | null;
+  image: string | null;
   memo: string | null;
-  status: string;
+  status: ArticleStatus;
+  createdAt: Date;
 }
 
 const tabs = [
-  { id: "WANT_TO_READ", label: "未読" },
-  { id: "IN_PROGRESS", label: "読書中" },
-  { id: "COMPLETED", label: "読了" },
-  { id: "ALL", label: "全記事" },
+  { id: "WANT_TO_READ" as const, label: "未読" },
+  { id: "IN_PROGRESS" as const, label: "読書中" },
+  { id: "COMPLETED" as const, label: "読了" },
+  { id: "ALL" as const, label: "全記事" },
 ] as const;
 
-type TabId = (typeof tabs)[number]["id"];
-type ArticleStatus = "WANT_TO_READ" | "IN_PROGRESS" | "COMPLETED";
+type TabId = StatusType;
 
 const StatusTabs: React.FC = () => {
+  const { data: session } = useSession(); // 追加
   const [activeTab, setActiveTab] = useState<TabId>("WANT_TO_READ");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const utils = api.useContext();
 
-  const { data: articles = [], isLoading } =
-    api.article.getArticlesByStatus.useQuery(
-      { status: activeTab },
-      {
-        retry: false,
+  const { data: articles = [], isLoading, error } = 
+  api.article.getArticlesByStatus.useQuery(
+    { status: activeTab },
+    {
+      enabled: !!session,
+      retry: false,
+      onSettled: (data, error) => {
+        if (error) {
+          console.error("記事の取得に失敗:", error);
+        }
       },
+    },
+  );
+
+  // セッションチェックを追加
+  if (!session) {
+    return null;
+  }
+
+  // エラー表示を追加
+  if (error) {
+    return (
+      <div className="text-center text-xl font-medium text-red-600">
+        エラーが発生しました: {error.message}
+      </div>
     );
+  }
 
   const getCurrentPageItems = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -138,9 +164,10 @@ const StatusTabs: React.FC = () => {
               <ArticleCard
                 id={article.id}
                 url={article.url}
-                title={article.url}
-                description={article.memo ?? ""}
-                status={article.status as ArticleStatus}
+                title={article.title ?? undefined}
+                description={article.description ?? undefined}
+                image={article.image ?? undefined}
+                status={article.status}
                 memo={article.memo ?? ""}
                 onSave={handleSave}
                 onDelete={handleDelete}

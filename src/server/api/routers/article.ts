@@ -5,10 +5,42 @@ import {
   publicProcedure,
   protectedProcedure,
 } from "~/server/api/trpc";
+import * as cheerio from 'cheerio';
 
-// ArticleStatus の型定義を追加
+// ArticleStatus の型定義
 export const articleStatusSchema = z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED"]);
 export type ArticleStatus = z.infer<typeof articleStatusSchema>;
+
+// StatusType の定義（ALL を含む）
+export const statusTypeSchema = z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED", "ALL"]);
+export type StatusType = z.infer<typeof statusTypeSchema>;
+
+// メタデータ抽出関数を追加
+function extractMetadata(html: string) {
+  const $ = cheerio.load(html);
+  
+  const getMetaContent = (name: string): string | null => {
+    return $(`meta[name="${name}"], meta[property="${name}"], meta[property="og:${name}"]`).attr('content') ?? null;
+  };
+
+  return {
+    title: $('title').text() || getMetaContent('title'),
+    description: getMetaContent('description'),
+    image: getMetaContent('image'),
+  };
+}
+
+// 検索結果の型定義を修正
+const articleSearchResultSchema = z.object({
+  id: z.string(),
+  url: z.string(),
+  status: articleStatusSchema,
+  memo: z.string().nullable(),
+  createdAt: z.date(),
+  title: z.string().nullable(),
+  description: z.string().nullable(),
+  image: z.string().nullable(),
+});
 
 export const articleDetailsSchema = z.object({
   title: z.string().min(1, "タイトルは必須です"),
@@ -23,7 +55,7 @@ const urlInputSchema = z.object({
 
 const saveArticleSchema = z.object({
   url: z.string().url(),
-  status: z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED", "ALL"]),
+  status: articleStatusSchema,
   memo: z.string().optional(),
 });
 
@@ -36,6 +68,53 @@ const updateArticleSchema = z.object({
 export type ArticleDetails = z.infer<typeof articleDetailsSchema>;
 
 export const articleRouter = createTRPCRouter({
+  getArticlesByStatus: protectedProcedure
+    .input(
+      z.object({
+        status: statusTypeSchema,
+      })
+    )
+    .output(z.array(articleSearchResultSchema))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.session?.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "ログインが必要です",
+        });
+      }
+
+      try {
+        const where = {
+          userId: ctx.session.user.id,
+          ...(input.status && input.status !== "ALL" ? { status: input.status } : {}),
+        };
+
+        const articles = await ctx.db.article.findMany({
+          where,
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+
+        return articles.map(article => ({
+          id: article.id,
+          url: article.url,
+          status: article.status as ArticleStatus,
+          memo: article.memo,
+          createdAt: article.createdAt,
+          title: article.title,
+          description: article.description,
+          image: article.image,
+        }));
+      } catch (error) {
+        console.error("GetArticlesByStatus error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "記事の取得に失敗しました",
+        });
+      }
+    }),
+
   getArticleDetails: publicProcedure
     .input(urlInputSchema)
     .output(articleDetailsSchema)
@@ -57,38 +136,22 @@ export const articleRouter = createTRPCRouter({
           });
         }
 
-        await response.text();
+        const html = await response.text();
+        const metadata = extractMetadata(html);
 
-        const articleData = {
-          title: "記事タイトル",
+        return {
+          title: metadata.title ?? "",
           url: validatedUrl.url,
-          thumbnail: null,
-          description: null,
+          thumbnail: metadata.image,
+          description: metadata.description,
         };
-
-        const validatedArticle = articleDetailsSchema.parse(articleData);
-
-        return validatedArticle;
       } catch (error) {
-        if (error instanceof z.ZodError) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "データの形式が不正です",
-            cause: error.message,
-          });
-        }
-
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-
         if (error instanceof Error) {
-          console.error("Unexpected error:", error.message);
+          console.error("GetArticleDetails error:", error.message);
         }
-
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "記事情報の取得に失敗しました",
+          message: "記事の詳細取得に失敗しました",
         });
       }
     }),
@@ -97,12 +160,30 @@ export const articleRouter = createTRPCRouter({
     .input(saveArticleSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        // 直接URLからメタデータを取得
+        const response = await fetch(input.url, {
+          method: "GET",
+          headers: {
+            Accept: "text/html",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch article: ${response.status} ${response.statusText}`);
+        }
+
+        const html = await response.text();
+        const metadata = extractMetadata(html);
+
         const article = await ctx.db.article.create({
           data: {
             url: input.url,
             status: input.status,
-            memo: input.memo,
+            memo: input.memo ?? "",
             userId: ctx.session.user.id,
+            title: metadata.title ?? null,
+            description: metadata.description ?? null,
+            image: metadata.image ?? null,
           },
         });
         return article;
@@ -117,46 +198,9 @@ export const articleRouter = createTRPCRouter({
       }
     }),
 
-  getArticlesByStatus: protectedProcedure
-    .input(
-      z.object({
-        status: z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED", "ALL"]),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      try {
-        const where = {
-          userId: ctx.session.user.id,
-          ...(input.status !== "ALL" ? { status: input.status } : {}),
-        };
-
-        const articles = await ctx.db.article.findMany({
-          where,
-          orderBy: {
-            createdAt: "desc",
-          },
-          select: {
-            id: true,
-            url: true,
-            status: true,
-            memo: true,
-            createdAt: true,
-          },
-        });
-        return articles;
-      } catch (error) {
-        if (error instanceof Error) {
-          console.error("Fetch error:", error.message);
-        }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "記事の取得に失敗しました",
-        });
-      }
-    }),
-
   searchArticles: protectedProcedure
     .input(z.object({ query: z.string() }))
+    .output(z.array(articleSearchResultSchema))
     .query(async ({ ctx, input }) => {
       try {
         const articles = await ctx.db.article.findMany({
@@ -165,20 +209,24 @@ export const articleRouter = createTRPCRouter({
             OR: [
               { url: { contains: input.query, mode: 'insensitive' } },
               { memo: { contains: input.query, mode: 'insensitive' } },
+              { title: { contains: input.query, mode: 'insensitive' } },
             ],
           },
           orderBy: {
             createdAt: "desc",
           },
-          select: {
-            id: true,
-            url: true,
-            status: true,
-            memo: true,
-            createdAt: true,
-          },
         });
-        return articles;
+
+        return articles.map(article => ({
+          id: article.id,
+          url: article.url,
+          status: article.status as ArticleStatus,
+          memo: article.memo,
+          createdAt: article.createdAt,
+          title: article.title,
+          description: article.description,
+          image: article.image,
+        }));
       } catch (error) {
         if (error instanceof Error) {
           console.error("Search error:", error.message);
