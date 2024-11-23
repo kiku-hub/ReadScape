@@ -27,8 +27,8 @@ interface SearchResult {
   url: string;
   title: string | null;
   memo: string | null;
-  description: string | null;  // 追加
-  image: string | null;        // 追加
+  description: string | null;
+  image: string | null;
 }
 
 export default function SearchModal() {
@@ -38,7 +38,7 @@ export default function SearchModal() {
   const utils = api.useContext();
 
   const { data: searchResults = [] } = api.article.searchArticles.useQuery<SearchResult[]>(
-    { query: debouncedQuery },
+    { query: debouncedQuery.toLowerCase() },
     {
       enabled: debouncedQuery.length > 0 && open,
     }
@@ -122,26 +122,50 @@ export default function SearchModal() {
 
       <Modal
         open={open}
-        onClose={() => {
-          setOpen(false);
-          setSearchQuery("");
-        }}
+        onClose={() => void 0}  // nullの代わりにvoid 0を使用
+        disableEscapeKeyDown
         aria-labelledby="search-modal"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(4px)',
+          }
+        }}
       >
-        <Box sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: { xs: '90%', sm: '600px' },
-          maxHeight: '80vh',
-          bgcolor: 'background.paper',
-          borderRadius: 2,
-          boxShadow: 24,
-          p: 4,
-          overflow: 'auto',
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box
+          sx={{
+            position: 'relative',
+            width: { xs: '90%', sm: '600px', md: '800px' },
+            maxHeight: '85vh',
+            bgcolor: 'background.paper',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+            p: { xs: 2, sm: 4 },
+            overflow: 'hidden',
+            animation: 'modalFadeIn 0.3s ease-out',
+            '@keyframes modalFadeIn': {
+              from: {
+                opacity: 0,
+                transform: 'scale(0.95)',
+              },
+              to: {
+                opacity: 1,
+                transform: 'scale(1)',
+              },
+            },
+          }}
+        >
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              mb: 3,
+              gap: 2,
+            }}
+          >
             <TextField
               fullWidth
               variant="outlined"
@@ -149,29 +173,107 @@ export default function SearchModal() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
-              sx={{ mr: 1 }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                  transition: 'all 0.3s ease',
+                  border: '2px solid transparent',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    border: '2px solid rgba(76, 175, 80, 0.1)',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.06)',
+                    border: '2px solid rgba(76, 175, 80, 0.3)',
+                    boxShadow: '0 4px 20px rgba(76, 175, 80, 0.15)',
+                  },
+                  '& fieldset': {
+                    border: 'none',
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  padding: '12px 16px',
+                  fontSize: '1rem',
+                  '&::placeholder': {
+                    color: 'rgba(0, 0, 0, 0.4)',
+                    fontSize: '0.95rem',
+                  },
+                },
+              }}
             />
-            <IconButton onClick={() => {
-              setOpen(false);
-              setSearchQuery("");
-            }}>
+            <IconButton 
+              onClick={() => {
+                setOpen(false);
+                setSearchQuery("");
+              }}
+              sx={{
+                color: 'text.secondary',
+                transition: 'all 0.2s ease',
+                padding: '8px',
+                '&:hover': {
+                  color: 'text.primary',
+                  transform: 'rotate(90deg)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                },
+              }}
+            >
               <CloseIcon />
             </IconButton>
           </Box>
 
-          <Box sx={{ mt: 2 }}>
+          <Box 
+            sx={{ 
+              mt: 2,
+              maxHeight: 'calc(85vh - 140px)',
+              overflow: 'auto',
+              px: 1,
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#ddd',
+                borderRadius: '4px',
+                '&:hover': {
+                  background: '#ccc',
+                },
+              },
+            }}
+          >
             {searchResults.length === 0 && searchQuery && (
-              <Typography color="text.secondary" align="center">
+              <Typography 
+                color="text.secondary" 
+                align="center"
+                sx={{
+                  py: 8,
+                  fontSize: '1.1rem',
+                  fontWeight: 500,
+                }}
+              >
                 検索結果が見つかりませんでした
               </Typography>
             )}
             {searchResults.map((article) => (
-              <Box key={article.id} sx={{ mb: 2 }}>
+              <Box 
+                key={article.id} 
+                sx={{ 
+                  mb: 2,
+                  transition: 'transform 0.2s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                  },
+                }}
+              >
                 <ArticleCard
                   id={article.id}
                   url={article.url}
-                  title={article.title}
+                  title={article.title ?? undefined}
+                  description={article.description ?? undefined}
                   status={article.status}
+                  image={article.image ?? undefined}
                   memo={article.memo ?? ""}
                   onDelete={handleDelete}
                   onSave={handleSave}
