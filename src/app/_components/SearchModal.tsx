@@ -8,6 +8,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import { api } from "~/trpc/react";
 import ArticleCard from "./ArticleCard";
 import { useDebounce } from "~/hooks/useDebounce";
+import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import type { ArticleStatus } from "~/server/api/routers/article";
 
 const IconButton = dynamic(
@@ -32,6 +34,8 @@ interface SearchResult {
 }
 
 export default function SearchModal() {
+  const { data: session } = useSession();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebounce(searchQuery, 300);
@@ -40,7 +44,7 @@ export default function SearchModal() {
   const { data: searchResults = [] } = api.article.searchArticles.useQuery<SearchResult[]>(
     { query: debouncedQuery.toLowerCase() },
     {
-      enabled: debouncedQuery.length > 0 && open,
+      enabled: debouncedQuery.length > 0 && open && !!session && pathname !== "/auth/signin",
     }
   );
 
@@ -71,6 +75,11 @@ export default function SearchModal() {
       console.error("保存中にエラーが発生しました:", error);
     }
   };
+
+  // 未認証またはログインページでは表示しない
+  if (!session || pathname === "/auth/signin") {
+    return null;
+  }
 
   return (
     <>
@@ -122,7 +131,7 @@ export default function SearchModal() {
 
       <Modal
         open={open}
-        onClose={() => void 0}  // nullの代わりにvoid 0を使用
+        onClose={() => setOpen(false)}
         disableEscapeKeyDown
         aria-labelledby="search-modal"
         sx={{

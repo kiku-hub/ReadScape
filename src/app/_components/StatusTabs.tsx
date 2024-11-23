@@ -42,27 +42,24 @@ const StatusTabs: React.FC = () => {
     {
       enabled: !!session,
       retry: false,
-      onSettled: (data, error) => {
-        if (error) {
-          console.error("記事の取得に失敗:", error);
-        }
-      },
-    },
+    }
   );
 
-  // セッションチェックを追加
-  if (!session) {
-    return null;
-  }
-
-  // エラー表示を追加
+  // エラーハンドリングは既存のif文で行う
   if (error) {
     return (
       <div className="text-center text-xl font-medium text-red-600">
-        エラーが発生しました: {error.message}
+        エラーが発生しました: {error instanceof Error ? error.message : '不明なエラーが発生しました'}
       </div>
     );
   }
+
+// セッションチェックを追加
+if (!session) {
+  return null;
+}
+
+
 
   const getCurrentPageItems = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -193,16 +190,16 @@ const StatusTabs: React.FC = () => {
       <div className="relative flex flex-wrap justify-center gap-2 md:gap-4 rounded-full bg-gray-100 p-2 md:p-3 shadow-lg">
         {tabs.map((tab) => (
           <button
-            key={tab.id}
-            className={`relative rounded-full px-4 md:px-8 py-2 md:py-3 text-sm font-semibold transition-all duration-300 ${
-              activeTab === tab.id
-                ? "bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-pink-500/40 hover:scale-110"
-                : "bg-white text-gray-600 hover:text-gray-900 hover:shadow-lg hover:shadow-gray-500/30"
-            }`}
-            onClick={() => handleTabChange(tab.id)}
-          >
-            {tab.label}
-          </button>
+          key={tab.id}
+          className={`relative rounded-full px-4 md:px-8 py-2 md:py-3 text-sm font-semibold transition-all duration-300 ${
+            activeTab === tab.id
+              ? "bg-gradient-to-r from-lime-400 via-green-400 to-emerald-400 text-white shadow-lg shadow-lime-500/30 hover:scale-110"
+              : "bg-white text-gray-600 hover:text-gray-900 hover:shadow-lg hover:shadow-gray-500/30"
+          }`}
+          onClick={() => handleTabChange(tab.id)}
+        >
+          {tab.label}
+        </button>
         ))}
       </div>
 
