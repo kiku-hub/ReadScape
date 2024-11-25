@@ -150,6 +150,7 @@ const SearchField = ({
     />
     <IconButton 
       onClick={onClose}
+      aria-label="モーダルを閉じる"
       sx={{
         color: 'text.secondary',
         transition: 'all 0.2s ease',
@@ -204,6 +205,7 @@ export default function SearchModal() {
       >
         <IconButton
           onClick={() => setOpen(true)}
+          aria-label="記事を検索"  
           sx={STYLES.searchButton}
         >
           <SearchIcon />
