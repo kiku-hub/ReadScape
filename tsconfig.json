@@ -23,10 +23,14 @@
     "plugins": [{ "name": "next" }],
     "incremental": true,
 
+    /* Testing Configuration */
+    "types": ["jest", "@testing-library/jest-dom", "node"],
+
     /* Path Aliases */
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "@/*": ["./src/*"]
     }
   },
   "include": [
@@ -36,7 +40,9 @@
     "**/*.tsx",
     "**/*.cjs",
     "**/*.js",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "jest.setup.ts",
+    "jest.config.ts"
   ],
   "exclude": ["node_modules"]
 }
