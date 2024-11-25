@@ -189,18 +189,20 @@ const StatusTabs: React.FC = () => {
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {getCurrentPageItems(articles).map((article: Article) => (
-            <div key={article.id} className="w-full">
-              <ArticleCard
-                id={article.id}
-                url={article.url}
-                title={article.title ?? undefined}
-                description={article.description ?? undefined}
-                image={article.image ?? undefined}
-                status={article.status}
-                memo={article.memo ?? ""}
-                onSave={handleSave}
-                onDelete={handleDelete}
-              />
+            <div key={article.id} className="w-full transform transition-all duration-300 hover:scale-[1.02]">
+              <div className="shadow-lg hover:shadow-xl rounded-lg">
+                <ArticleCard
+                  id={article.id}
+                  url={article.url}
+                  title={article.title ?? undefined}
+                  description={article.description ?? undefined}
+                  image={article.image ?? undefined}
+                  status={article.status}
+                  memo={article.memo ?? ""}
+                  onSave={handleSave}
+                  onDelete={handleDelete}
+                />
+              </div>
             </div>
           ))}
         </div>
