@@ -12,19 +12,14 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import type { ArticleStatus } from "~/server/api/routers/article";
 
-const IconButton = dynamic(
-  () => import('@mui/material/IconButton'),
-  { ssr: false }
-);
+// 動的インポートコンポーネント
+const IconButton = dynamic(() => import('@mui/material/IconButton'), { ssr: false });
+const Modal = dynamic(() => import('@mui/material/Modal'), { ssr: false });
 
-const Modal = dynamic(
-  () => import('@mui/material/Modal'),
-  { ssr: false }
-);
-
+// 型定義
 interface SearchResult {
   id: string;
-  status: "WANT_TO_READ" | "IN_PROGRESS" | "COMPLETED";
+  status: ArticleStatus;
   createdAt: Date;
   url: string;
   title: string | null;
@@ -33,53 +28,160 @@ interface SearchResult {
   image: string | null;
 }
 
-export default function SearchModal() {
-  const { data: session } = useSession();
-  const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+// スタイル定数
+const STYLES = {
+  searchButton: {
+    position: 'fixed',
+    top: { xs: '8px', sm: '16px' },
+    left: { xs: '180px', sm: '220px' },
+    padding: '4px',
+    height: { xs: '32px', sm: '36px' },
+    width: { xs: '32px', sm: '36px' },
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backdropFilter: 'blur(8px)',
+    border: '1px solid transparent',
+    boxShadow: '0 2px 8px rgba(76, 175, 80, 0.1)',
+    transition: 'all 0.3s ease',
+    '& .MuiSvgIcon-root': {
+      fontSize: { xs: '1.1rem', sm: '1.3rem' },
+    },
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.5)',
+      border: '1px solid rgba(76, 175, 80, 0.2)',
+      boxShadow: '0 4px 20px rgba(76, 175, 80, 0.15)',
+      transform: 'translateY(-2px)',
+    }
+  },
+  modal: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    '& .MuiBackdrop-root': {
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      backdropFilter: 'blur(4px)',
+    }
+  }
+} as const;
+
+// カスタムフック: 検索ロジック
+const useArticleSearch = (searchQuery: string, isOpen: boolean) => {
   const debouncedQuery = useDebounce(searchQuery, 300);
   const utils = api.useContext();
 
   const { data: searchResults = [] } = api.article.searchArticles.useQuery<SearchResult[]>(
     { query: debouncedQuery.toLowerCase() },
     {
-      enabled: debouncedQuery.length > 0 && open && !!session && pathname !== "/auth/signin",
+      enabled: debouncedQuery.length > 0 && isOpen,
+      staleTime: 1000 * 60 * 5, // 5分間キャッシュを保持
     }
   );
 
   const deleteMutation = api.article.delete.useMutation({
-    onSuccess: () => {
-      void utils.article.searchArticles.invalidate();
-    },
+    onSuccess: () => void utils.article.searchArticles.invalidate()
   });
 
   const updateMutation = api.article.update.useMutation({
-    onSuccess: () => {
-      void utils.article.searchArticles.invalidate();
-    },
+    onSuccess: () => void utils.article.searchArticles.invalidate()
   });
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteMutation.mutateAsync({ id });
-    } catch (error) {
-      console.error("削除中にエラーが発生しました:", error);
+  return {
+    searchResults,
+    handleDelete: async (id: string) => {
+      try {
+        await deleteMutation.mutateAsync({ id });
+      } catch (error) {
+        console.error("削除中にエラーが発生しました:", error);
+      }
+    },
+    handleSave: async (id: string, memo: string, status: ArticleStatus) => {
+      try {
+        await updateMutation.mutateAsync({ id, memo, status });
+      } catch (error) {
+        console.error("保存中にエラーが発生しました:", error);
+      }
     }
   };
+};
 
-  const handleSave = async (id: string, memo: string, status: ArticleStatus) => {
-    try {
-      await updateMutation.mutateAsync({ id, memo, status });
-    } catch (error) {
-      console.error("保存中にエラーが発生しました:", error);
-    }
-  };
+// 検索フィールドコンポーネント
+const SearchField = ({ 
+  searchQuery, 
+  setSearchQuery, 
+  onClose 
+}: { 
+  searchQuery: string; 
+  setSearchQuery: (query: string) => void; 
+  onClose: () => void;
+}) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+    <TextField
+      fullWidth
+      variant="outlined"
+      placeholder="タイトル、URL、メモで検索..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      autoFocus
+      sx={{
+        '& .MuiOutlinedInput-root': {
+          borderRadius: '12px',
+          backgroundColor: 'rgba(0, 0, 0, 0.02)',
+          transition: 'all 0.3s ease',
+          border: '2px solid transparent',
+          '&:hover': {
+            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+            border: '2px solid rgba(76, 175, 80, 0.1)',
+          },
+          '&.Mui-focused': {
+            backgroundColor: 'rgba(0, 0, 0, 0.06)',
+            border: '2px solid rgba(76, 175, 80, 0.3)',
+            boxShadow: '0 4px 20px rgba(76, 175, 80, 0.15)',
+          },
+          '& fieldset': { border: 'none' },
+        },
+        '& .MuiInputBase-input': {
+          padding: '12px 16px',
+          fontSize: '1rem',
+          '&::placeholder': {
+            color: 'rgba(0, 0, 0, 0.4)',
+            fontSize: '0.95rem',
+          },
+        },
+      }}
+    />
+    <IconButton 
+      onClick={onClose}
+      sx={{
+        color: 'text.secondary',
+        transition: 'all 0.2s ease',
+        padding: '8px',
+        '&:hover': {
+          color: 'text.primary',
+          transform: 'rotate(90deg)',
+          backgroundColor: 'rgba(0, 0, 0, 0.04)',
+        },
+      }}
+    >
+      <CloseIcon />
+    </IconButton>
+  </Box>
+);
+
+// メインコンポーネント
+export default function SearchModal() {
+  const { data: session } = useSession();
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  const { searchResults, handleDelete, handleSave } = useArticleSearch(searchQuery, open);
 
   // 未認証またはログインページでは表示しない
-  if (!session || pathname === "/auth/signin") {
-    return null;
-  }
+  if (!session || pathname === "/auth/signin") return null;
+
+  const handleClose = () => {
+    setOpen(false);
+    setSearchQuery("");
+  };
 
   return (
     <>
@@ -102,28 +204,7 @@ export default function SearchModal() {
       >
         <IconButton
           onClick={() => setOpen(true)}
-          sx={{
-            position: 'fixed',
-            top: { xs: '8px', sm: '16px' },
-            left: { xs: '180px', sm: '220px' },
-            padding: '4px',
-            height: { xs: '32px', sm: '36px' },
-            width: { xs: '32px', sm: '36px' },
-            backgroundColor: 'rgba(255, 255, 255, 0.3)',
-            backdropFilter: 'blur(8px)',
-            border: '1px solid transparent',
-            boxShadow: '0 2px 8px rgba(76, 175, 80, 0.1)',
-            transition: 'all 0.3s ease',
-            '& .MuiSvgIcon-root': {
-              fontSize: { xs: '1.1rem', sm: '1.3rem' },
-            },
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.5)',
-              border: '1px solid rgba(76, 175, 80, 0.2)',
-              boxShadow: '0 4px 20px rgba(76, 175, 80, 0.15)',
-              transform: 'translateY(-2px)',
-            }
-          }}
+          sx={STYLES.searchButton}
         >
           <SearchIcon />
         </IconButton>
@@ -131,18 +212,10 @@ export default function SearchModal() {
 
       <Modal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={handleClose}
         disableEscapeKeyDown
         aria-labelledby="search-modal"
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          '& .MuiBackdrop-root': {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(4px)',
-          }
-        }}
+        sx={STYLES.modal}
       >
         <Box
           sx={{
@@ -156,80 +229,16 @@ export default function SearchModal() {
             overflow: 'hidden',
             animation: 'modalFadeIn 0.3s ease-out',
             '@keyframes modalFadeIn': {
-              from: {
-                opacity: 0,
-                transform: 'scale(0.95)',
-              },
-              to: {
-                opacity: 1,
-                transform: 'scale(1)',
-              },
+              from: { opacity: 0, transform: 'scale(0.95)' },
+              to: { opacity: 1, transform: 'scale(1)' },
             },
           }}
         >
-          <Box 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              mb: 3,
-              gap: 2,
-            }}
-          >
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="タイトル、URL、メモで検索..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                  transition: 'all 0.3s ease',
-                  border: '2px solid transparent',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                    border: '2px solid rgba(76, 175, 80, 0.1)',
-                  },
-                  '&.Mui-focused': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.06)',
-                    border: '2px solid rgba(76, 175, 80, 0.3)',
-                    boxShadow: '0 4px 20px rgba(76, 175, 80, 0.15)',
-                  },
-                  '& fieldset': {
-                    border: 'none',
-                  },
-                },
-                '& .MuiInputBase-input': {
-                  padding: '12px 16px',
-                  fontSize: '1rem',
-                  '&::placeholder': {
-                    color: 'rgba(0, 0, 0, 0.4)',
-                    fontSize: '0.95rem',
-                  },
-                },
-              }}
-            />
-            <IconButton 
-              onClick={() => {
-                setOpen(false);
-                setSearchQuery("");
-              }}
-              sx={{
-                color: 'text.secondary',
-                transition: 'all 0.2s ease',
-                padding: '8px',
-                '&:hover': {
-                  color: 'text.primary',
-                  transform: 'rotate(90deg)',
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                },
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
+          <SearchField 
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onClose={handleClose}
+          />
 
           <Box 
             sx={{ 

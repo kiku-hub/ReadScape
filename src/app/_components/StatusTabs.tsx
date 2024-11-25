@@ -2,12 +2,13 @@
 
 import React, { useState } from "react";
 import { api } from "~/trpc/react";
-import { useSession } from "next-auth/react"; // 追加
+import { useSession } from "next-auth/react";
 import LoadingSpinner from "./LoadingSpinner";
 import { ArticleCard } from "./ArticleCard";
 import Pagination from "./Pagination";
 import type { ArticleStatus, StatusType } from "~/server/api/routers/article";
 
+// 型定義
 interface Article {
   id: string;
   url: string;
@@ -19,33 +20,143 @@ interface Article {
   createdAt: Date;
 }
 
-const tabs = [
-  { id: "WANT_TO_READ" as const, label: "未読" },
-  { id: "IN_PROGRESS" as const, label: "読書中" },
-  { id: "COMPLETED" as const, label: "読了" },
-  { id: "ALL" as const, label: "全記事" },
+interface TabDefinition {
+  id: StatusType;
+  label: string;
+}
+
+// 定数定義
+const ITEMS_PER_PAGE = 10;
+const TABS: readonly TabDefinition[] = [
+  { id: "WANT_TO_READ", label: "未読" },
+  { id: "IN_PROGRESS", label: "読書中" },
+  { id: "COMPLETED", label: "読了" },
+  { id: "ALL", label: "全記事" },
 ] as const;
 
-type TabId = StatusType;
-
-const StatusTabs: React.FC = () => {
-  const { data: session } = useSession(); // 追加
-  const [activeTab, setActiveTab] = useState<TabId>("WANT_TO_READ");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
+// カスタムフック: 記事の取得と更新のロジックを分離
+const useArticleManagement = (activeTab: StatusType) => {
+  const { data: session } = useSession();
   const utils = api.useContext();
 
-  const { data: articles = [], isLoading, error } = 
-  api.article.getArticlesByStatus.useQuery(
+  // 記事取得のクエリ
+  const {
+    data: articles = [],
+    isLoading,
+    error,
+  } = api.article.getArticlesByStatus.useQuery(
     { status: activeTab },
     {
       enabled: !!session,
       retry: false,
+      staleTime: 1000 * 60, // 1分間キャッシュを保持
     }
   );
 
-  // エラーハンドリングは既存のif文で行う
+  // 記事更新のミューテーション
+  const { mutate: updateArticle } = api.article.update.useMutation({
+    onSuccess: () => void utils.article.getArticlesByStatus.invalidate(),
+    onError: (error) => console.error("Failed to update article:", error),
+  });
+
+  // 記事削除のミューテーション
+  const { mutate: deleteArticle } = api.article.delete.useMutation({
+    onSuccess: () => void utils.article.getArticlesByStatus.invalidate(),
+    onError: (error) => console.error("Failed to delete article:", error),
+  });
+
+  // 記事更新ハンドラー
+const handleSave = async (
+  id: string,
+  memo: string,
+  status: ArticleStatus,
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    updateArticle(
+      { id, memo, status },
+      {
+        onSuccess: () => resolve(),
+        onError: (error) => reject(new Error(
+          error.message || "Failed to update article"
+        )),
+      },
+    );
+  });
+};
+
+// 記事削除ハンドラー
+const handleDelete = async (id: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    deleteArticle(
+      { id },
+      {
+        onSuccess: () => resolve(),
+        onError: (error) => reject(new Error(
+          error.message || "Failed to delete article"
+        )),
+      },
+    );
+  });
+};
+
+  return {
+    articles,
+    isLoading,
+    error,
+    handleSave,
+    handleDelete,
+    session,
+  };
+};
+
+// ページネーション用のカスタムフック
+const usePagination = (totalItems: number, itemsPerPage: number) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  const getCurrentPageItems = <T,>(items: T[]) => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return items.slice(startIndex, endIndex);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  return {
+    currentPage,
+    totalPages,
+    getCurrentPageItems,
+    handlePageChange,
+  };
+};
+
+// メインコンポーネント
+const StatusTabs: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<StatusType>("WANT_TO_READ");
+  
+  const {
+    articles,
+    isLoading,
+    error,
+    handleSave,
+    handleDelete,
+    session,
+  } = useArticleManagement(activeTab);
+
+  const {
+    currentPage,
+    totalPages,
+    getCurrentPageItems,
+    handlePageChange,
+  } = usePagination(articles.length, ITEMS_PER_PAGE);
+
+  // セッションチェック
+  if (!session) return null;
+
+  // エラーハンドリング
   if (error) {
     return (
       <div className="text-center text-xl font-medium text-red-600">
@@ -54,101 +165,22 @@ const StatusTabs: React.FC = () => {
     );
   }
 
-// セッションチェックを追加
-if (!session) {
-  return null;
-}
-
-
-
-  const getCurrentPageItems = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return articles.slice(startIndex, endIndex);
-  };
-
-  const totalPages = Math.ceil(articles.length / itemsPerPage);
-
-  const handleTabChange = (tabId: TabId) => {
-    setActiveTab(tabId);
-    setCurrentPage(1);
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const { mutate: updateArticle } = api.article.update.useMutation({
-    onSuccess: async () => {
-      try {
-        await utils.article.getArticlesByStatus.invalidate();
-      } catch (error) {
-        console.error("Failed to invalidate query:", error);
-      }
-    },
-  });
-
-  const { mutate: deleteArticle } = api.article.delete.useMutation({
-    onSuccess: async () => {
-      try {
-        await utils.article.getArticlesByStatus.invalidate();
-      } catch (error) {
-        console.error("Failed to invalidate query:", error);
-      }
-    },
-  });
-
-  const handleSave = async (
-    id: string,
-    memo: string,
-    status: ArticleStatus,
-  ): Promise<void> => {
-    try {
-      await new Promise<void>((resolve) => {
-        updateArticle(
-          {
-            id,
-            memo,
-            status,
-          },
-          {
-            onSuccess: () => resolve(),
-          },
-        );
-      });
-    } catch (error) {
-      console.error("Failed to update article:", error);
-    }
-  };
-
-  const handleDelete = async (id: string): Promise<void> => {
-    try {
-      await new Promise<void>((resolve) => {
-        deleteArticle(
-          { id },
-          {
-            onSuccess: () => resolve(),
-          },
-        );
-      });
-    } catch (error) {
-      console.error("Failed to delete article:", error);
-    }
-  };
-
+  // コンテンツレンダリング
   const renderContent = () => {
     if (isLoading) {
       return <LoadingSpinner message="読み込み中..." />;
     }
 
     if (articles.length === 0) {
+      const messages = {
+        WANT_TO_READ: "未読の記事がありません",
+        IN_PROGRESS: "読書中の記事がありません",
+        COMPLETED: "読了した記事がありません",
+        ALL: "記事がありません",
+      };
       return (
         <div className="text-center text-xl font-medium text-gray-900">
-          {activeTab === "WANT_TO_READ" && "未読の記事がありません"}
-          {activeTab === "IN_PROGRESS" && "読書中の記事がありません"}
-          {activeTab === "COMPLETED" && "読了した記事がありません"}
-          {activeTab === "ALL" && "記事がありません"}
+          {messages[activeTab]}
         </div>
       );
     }
@@ -156,7 +188,7 @@ if (!session) {
     return (
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {getCurrentPageItems().map((article: Article) => (
+          {getCurrentPageItems(articles).map((article: Article) => (
             <div key={article.id} className="w-full">
               <ArticleCard
                 id={article.id}
@@ -172,7 +204,7 @@ if (!session) {
             </div>
           ))}
         </div>
-        {articles.length > itemsPerPage && (
+        {articles.length > ITEMS_PER_PAGE && (
           <div className="mt-6 md:mt-8">
             <Pagination
               currentPage={currentPage}
@@ -188,18 +220,18 @@ if (!session) {
   return (
     <div className="fixed top-40 left-0 right-0 flex flex-col items-center space-y-4 z-30 h-[calc(100vh-160px)]">
       <div className="relative flex flex-wrap justify-center gap-2 md:gap-4 rounded-full bg-gray-100 p-2 md:p-3 shadow-lg">
-        {tabs.map((tab) => (
+        {TABS.map((tab) => (
           <button
-          key={tab.id}
-          className={`relative rounded-full px-4 md:px-8 py-2 md:py-3 text-sm font-semibold transition-all duration-300 ${
-            activeTab === tab.id
-              ? "bg-gradient-to-r from-lime-400 via-green-400 to-emerald-400 text-white shadow-lg shadow-lime-500/30 hover:scale-110"
-              : "bg-white text-gray-600 hover:text-gray-900 hover:shadow-lg hover:shadow-gray-500/30"
-          }`}
-          onClick={() => handleTabChange(tab.id)}
-        >
-          {tab.label}
-        </button>
+            key={tab.id}
+            className={`relative rounded-full px-4 md:px-8 py-2 md:py-3 text-sm font-semibold transition-all duration-300 ${
+              activeTab === tab.id
+                ? "bg-gradient-to-r from-lime-400 via-green-400 to-emerald-400 text-white shadow-lg shadow-lime-500/30 hover:scale-110"
+                : "bg-white text-gray-600 hover:text-gray-900 hover:shadow-lg hover:shadow-gray-500/30"
+            }`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
         ))}
       </div>
 

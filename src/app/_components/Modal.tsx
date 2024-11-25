@@ -5,6 +5,14 @@ import Image from "next/image";
 import type { ArticleDetails } from "~/server/api/routers/article";
 import LoadingSpinner from "./LoadingSpinner";
 
+// 定数定義
+const ARTICLE_STATUSES = {
+  WANT_TO_READ: "未読",
+  IN_PROGRESS: "読書中",
+  COMPLETED: "読了",
+} as const;
+
+// 型定義
 interface ArticleApiResponse {
   title: string;
   description: string;
@@ -27,52 +35,43 @@ interface ArticleInfo {
   image: string;
 }
 
-export default function Modal({
-  isOpen,
-  onClose,
-  articleDetails,
-  onSave,
-}: ModalProps) {
-  const [status, setStatus] = useState<string>("WANT_TO_READ");
-  const [memo, setMemo] = useState<string>("");
+// カスタムフック: 記事情報の取得ロジック
+const useArticleInfo = (isOpen: boolean, articleDetails: ArticleDetails | null) => {
   const [articleInfo, setArticleInfo] = useState<ArticleInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchArticleInfo = async () => {
-      if (articleDetails?.url) {
-        setIsLoading(true);
-        try {
-          const response = await fetch("/api/fetch-article-info", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ url: articleDetails.url }),
-          });
+      if (!articleDetails?.url) return;
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
+      setIsLoading(true);
+      try {
+        const response = await fetch("/api/fetch-article-info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: articleDetails.url }),
+        });
 
-          const data = (await response.json()) as ArticleApiResponse;
-
-          if ("error" in data && data.error) {
-            console.error("記事情報の取得に失敗しました:", data.error.message);
-          } else {
-            setArticleInfo({
-              title: data.title ?? "タイトルなし",
-              image: data.image ?? "",
-            });
-          }
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error occurred";
-          console.error("記事情報の取得に失敗しました:", errorMessage);
-        } finally {
-          setIsLoading(false);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        const data = (await response.json()) as ArticleApiResponse;
+
+        if ("error" in data && data.error) {
+          console.error("記事情報の取得に失敗しました:", data.error.message);
+          return;
+        }
+
+        setArticleInfo({
+          title: data.title ?? "タイトルなし",
+          image: data.image ?? "",
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+        console.error("記事情報の取得に失敗しました:", errorMessage);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -81,18 +80,35 @@ export default function Modal({
     }
   }, [isOpen, articleDetails]);
 
+  return { articleInfo, isLoading };
+};
+
+export default function Modal({
+  isOpen,
+  onClose,
+  articleDetails,
+  onSave,
+}: ModalProps) {
+  const [status, setStatus] = useState<string>("WANT_TO_READ");
+  const [memo, setMemo] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const { articleInfo, isLoading } = useArticleInfo(isOpen, articleDetails);
+
   if (!isOpen) return null;
 
+  // モーダルを閉じる際の状態リセット
   const handleClose = () => {
     setStatus("WANT_TO_READ");
     setMemo("");
     onClose();
   };
 
+  // 保存処理
   const handleSave = async () => {
     try {
       setIsSaving(true);
       await onSave(status, memo);
+      // UX向上のための遅延
       await new Promise(resolve => setTimeout(resolve, 1000));
       handleClose();
       window.location.reload();
@@ -102,6 +118,34 @@ export default function Modal({
       setIsSaving(false);
     }
   };
+
+  // 記事情報表示コンポーネント
+  const ArticleContent = () => (
+    <div className="mb-8">
+      <a
+        href={articleDetails?.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group block"
+      >
+        {articleInfo?.image && (
+          <div className="mb-4 overflow-hidden rounded-xl">
+            <div className="relative mx-auto h-48 w-3/4 transition-transform duration-300 group-hover:scale-105">
+              <Image
+                src={articleInfo.image}
+                alt={articleInfo.title}
+                fill
+                className="object-contain"
+              />
+            </div>
+          </div>
+        )}
+        <h2 className="mb-4 line-clamp-2 text-xl font-bold text-gray-800 transition-colors duration-200 hover:text-blue-600">
+          {articleInfo?.title ?? "タイトルなし"}
+        </h2>
+      </a>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm transition-all duration-300">
@@ -135,31 +179,7 @@ export default function Modal({
             </div>
           ) : articleDetails ? (
             <>
-              <div className="mb-8">
-                <a
-                  href={articleDetails.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block"
-                >
-                  {articleInfo?.image && (
-                    <div className="mb-4 overflow-hidden rounded-xl">
-                      <div className="relative mx-auto h-48 w-3/4 transition-transform duration-300 group-hover:scale-105">
-                        <Image
-                          src={articleInfo.image}
-                          alt={articleInfo.title}
-                          fill
-                          className="object-contain"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  <h2 className="mb-4 line-clamp-2 text-xl font-bold text-gray-800 transition-colors duration-200 hover:text-blue-600">
-                    {articleInfo?.title ?? "タイトルなし"}
-                  </h2>
-                </a>
-              </div>
-
+              <ArticleContent />
               <div className="mb-6">
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   ステータス
@@ -169,9 +189,11 @@ export default function Modal({
                   onChange={(e) => setStatus(e.target.value)}
                   className="block w-full rounded-lg border-gray-300 bg-gray-50 p-3 text-gray-700 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
                 >
-                  <option value="WANT_TO_READ">未読</option>
-                  <option value="IN_PROGRESS">読書中</option>
-                  <option value="COMPLETED">読了</option>
+                  {Object.entries(ARTICLE_STATUSES).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </div>
 

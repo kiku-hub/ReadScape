@@ -10,67 +10,95 @@ import SuperJSON from "superjson";
 import { type AppRouter } from "~/server/api/root";
 import { createQueryClient } from "./query-client";
 
-let clientQueryClientSingleton: QueryClient | undefined = undefined;
-const getQueryClient = () => {
-  if (typeof window === "undefined") {
-    // Server: always make a new query client
-    return createQueryClient();
-  }
-  // Browser: use singleton pattern to keep the same query client
-  return (clientQueryClientSingleton ??= createQueryClient());
-};
+// 定数の集中管理
+const CONSTANTS = {
+  DEFAULT_PORT: 3000,
+  TRPC_SOURCE: "nextjs-react",
+  TRPC_ENDPOINT: "/api/trpc",
+} as const;
 
+// シングルトンパターンの実装をより明確に
+class QueryClientSingleton {
+  private static instance: QueryClient | undefined;
+
+  static getInstance(): QueryClient {
+    if (typeof window === "undefined") {
+      return createQueryClient(); // サーバーサイドでは新しいインスタンスを作成
+    }
+    
+    if (!this.instance) {
+      this.instance = createQueryClient();
+    }
+    
+    return this.instance;
+  }
+}
+
+// tRPCクライアントの作成
 export const api = createTRPCReact<AppRouter>();
 
 /**
- * Inference helper for inputs.
- *
+ * 入力の型推論ヘルパー
  * @example type HelloInput = RouterInputs['example']['hello']
  */
 export type RouterInputs = inferRouterInputs<AppRouter>;
 
 /**
- * Inference helper for outputs.
- *
+ * 出力の型推論ヘルパー
  * @example type HelloOutput = RouterOutputs['example']['hello']
  */
 export type RouterOutputs = inferRouterOutputs<AppRouter>;
 
-export function TRPCReactProvider(props: { children: React.ReactNode }) {
-  const queryClient = getQueryClient();
+/**
+ * ベースURLを取得するユーティリティ関数
+ */
+function getBaseUrl(): string {
+  if (typeof window !== "undefined") return window.location.origin;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return `http://localhost:${process.env.PORT ?? CONSTANTS.DEFAULT_PORT}`;
+}
 
-  const [trpcClient] = useState(() =>
-    api.createClient({
-      links: [
-        loggerLink({
-          enabled: (op) =>
-            process.env.NODE_ENV === "development" ||
-            (op.direction === "down" && op.result instanceof Error),
-        }),
-        unstable_httpBatchStreamLink({
-          transformer: SuperJSON,
-          url: getBaseUrl() + "/api/trpc",
-          headers: () => {
-            const headers = new Headers();
-            headers.set("x-trpc-source", "nextjs-react");
-            return headers;
-          },
-        }),
-      ],
-    })
-  );
+/**
+ * tRPCクライアントの設定を生成する関数
+ */
+function createTRPCClientConfig() {
+  return {
+    links: [
+      loggerLink({
+        enabled: (op) =>
+          process.env.NODE_ENV === "development" ||
+          (op.direction === "down" && op.result instanceof Error),
+      }),
+      unstable_httpBatchStreamLink({
+        transformer: SuperJSON,
+        url: `${getBaseUrl()}${CONSTANTS.TRPC_ENDPOINT}`,
+        headers: () => {
+          const headers = new Headers();
+          headers.set("x-trpc-source", CONSTANTS.TRPC_SOURCE);
+          return headers;
+        },
+      }),
+    ],
+  };
+}
+
+interface TRPCReactProviderProps {
+  children: React.ReactNode;
+}
+
+/**
+ * tRPCプロバイダーコンポーネント
+ * アプリケーション全体でtRPCクライアントを提供
+ */
+export function TRPCReactProvider({ children }: TRPCReactProviderProps) {
+  const queryClient = QueryClientSingleton.getInstance();
+  const [trpcClient] = useState(() => api.createClient(createTRPCClientConfig()));
 
   return (
     <QueryClientProvider client={queryClient}>
       <api.Provider client={trpcClient} queryClient={queryClient}>
-        {props.children}
+        {children}
       </api.Provider>
     </QueryClientProvider>
   );
-}
-
-function getBaseUrl() {
-  if (typeof window !== "undefined") return window.location.origin;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return `http://localhost:${process.env.PORT ?? 3000}`;
 }

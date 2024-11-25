@@ -6,45 +6,78 @@ import Modal from "./Modal";
 import type { ArticleDetails } from "~/server/api/routers/article";
 import { api } from "~/trpc/react";
 
-export default function AuthenticatedView() {
-  const [articleDetails, setArticleDetails] = useState<ArticleDetails | null>(
-    null,
-  );
-  const [isModalOpen, setIsModalOpen] = useState(false);
+// 記事のステータスを定義
+type ArticleStatus = "WANT_TO_READ" | "IN_PROGRESS" | "COMPLETED";
 
-  const { mutate: saveArticle } = api.article.save.useMutation({
-    onSuccess: () => {
-      handleModalClose();
-    },
+// カスタムフック: 記事の保存ロジックを分離
+function useArticleSave(onSuccess: () => void) {
+  return api.article.save.useMutation({
+    onSuccess,
     onError: (error) => {
-      console.error("保存エラー:", error);
+      console.error("Article save error:", error);
     },
   });
+}
 
+// カスタムフック: モーダルの状態管理
+function useModalState() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [articleDetails, setArticleDetails] = useState<ArticleDetails | null>(
+    null
+  );
+
+  const openModal = () => setIsOpen(true);
+  const closeModal = () => {
+    setIsOpen(false);
+    setArticleDetails(null);
+  };
+
+  return {
+    isOpen,
+    articleDetails,
+    setArticleDetails,
+    openModal,
+    closeModal,
+  };
+}
+
+export default function AuthenticatedView() {
+  // モーダルの状態管理
+  const {
+    isOpen: isModalOpen,
+    articleDetails,
+    setArticleDetails,
+    openModal: handleModalOpen,
+    closeModal: handleModalClose,
+  } = useModalState();
+
+  // 記事保存のミューテーション
+  const { mutate: saveArticle } = useArticleSave(handleModalClose);
+
+  /**
+   * URL送信時のハンドラー
+   * @param details 記事の詳細情報
+   */
   const handleUrlSubmit = (details: ArticleDetails) => {
     setArticleDetails(details);
   };
 
-  const handleModalOpen = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    setArticleDetails(null);
-  };
-
+  /**
+   * 記事保存時のハンドラー
+   * @param status 記事のステータス
+   * @param memo メモ内容
+   */
   const handleSave = async (status: string, memo: string) => {
     if (!articleDetails) return;
 
     try {
       saveArticle({
         url: articleDetails.url,
-        status: status as "WANT_TO_READ" | "IN_PROGRESS" | "COMPLETED",
-        memo: memo,
+        status: status as ArticleStatus,
+        memo,
       });
     } catch (error) {
-      console.error("保存エラー:", error);
+      console.error("Save error:", error);
     }
   };
 

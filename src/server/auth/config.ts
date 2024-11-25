@@ -1,55 +1,59 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
-import GoogleProvider from "next-auth/providers/google"; // GoogleProvider を追加
+import GoogleProvider from "next-auth/providers/google";
 
 import { db } from "~/server/db";
 
-/**
- * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
- * object and keep type safety.
- *
- * @see https://next-auth.js.org/getting-started/typescript#module-augmentation
- */
-declare module "next-auth" {
-  interface Session extends DefaultSession {
-    user: {
-      id: string;
-      // ...other properties
-      // role: UserRole;
-    } & DefaultSession["user"];
+// カスタムセッション型の定義
+interface CustomSession extends DefaultSession {
+  user: {
+    id: string;
+    email: string | null | undefined;
+    name: string | null | undefined;
+    image: string | null | undefined;
   }
-
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
 }
 
+// 環境変数の型定義
+interface AuthEnvironmentVariables {
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
+}
+
+// 環境変数のバリデーション
+const validateEnvironmentVariables = (): AuthEnvironmentVariables => {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (!googleClientId || !googleClientSecret) {
+    throw new Error(
+      "必要な環境変数が設定されていません。GOOGLE_CLIENT_ID と GOOGLE_CLIENT_SECRET を確認してください。"
+    );
+  }
+
+  return {
+    GOOGLE_CLIENT_ID: googleClientId,
+    GOOGLE_CLIENT_SECRET: googleClientSecret,
+  };
+};
+
+// Google認証プロバイダーの設定
+const configureGoogleProvider = (env: AuthEnvironmentVariables) => {
+  return GoogleProvider({
+    clientId: env.GOOGLE_CLIENT_ID,
+    clientSecret: env.GOOGLE_CLIENT_SECRET,
+  });
+};
+
 /**
- * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
- *
- * @see https://next-auth.js.org/configuration/options
+ * NextAuth.jsの設定
+ * アダプター、プロバイダー、コールバックなどの設定を行います
  */
 export const authConfig = {
-  providers: [
-    GoogleProvider({
-      // GoogleProvider の設定を追加
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    }),
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
-  ],
+  providers: [configureGoogleProvider(validateEnvironmentVariables())],
   adapter: PrismaAdapter(db),
   callbacks: {
-    session: ({ session, user }) => ({
+    session: ({ session, user }): CustomSession => ({
       ...session,
       user: {
         ...session.user,
@@ -58,3 +62,15 @@ export const authConfig = {
     }),
   },
 } satisfies NextAuthConfig;
+
+// next-authの型拡張
+declare module "next-auth" {
+  interface Session extends CustomSession {
+    user: {
+      id: string;
+      email: string | null | undefined;
+      name: string | null | undefined;
+      image: string | null | undefined;
+    }
+  }
+}

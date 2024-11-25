@@ -7,200 +7,201 @@ import {
 } from "~/server/api/trpc";
 import * as cheerio from 'cheerio';
 
-// ArticleStatus の型定義
+// ============= Constants =============
+const ERROR_MESSAGES = {
+  UNAUTHORIZED: "ログインが必要です",
+  FETCH_FAILED: "記事の取得に失敗しました",
+  DETAILS_FAILED: "記事の詳細取得に失敗しました",
+  SAVE_FAILED: "記事の保存に失敗しました",
+  SEARCH_FAILED: "記事の検索に失敗しました",
+  UPDATE_FAILED: "記事の更新に失敗しました",
+  DELETE_FAILED: "記事の削除に失敗しました",
+} as const;
+
+// ============= Type Definitions =============
+/**
+ * 記事のステータスを定義
+ * @description 記事の読書状態を表す列挙型
+ */
 export const articleStatusSchema = z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED"]);
 export type ArticleStatus = z.infer<typeof articleStatusSchema>;
 
-// StatusType の定義（ALL を含む）
+/**
+ * フィルタリング用のステータスタイプ
+ * @description 記事一覧の表示フィルター用（ALLを含む）
+ */
 export const statusTypeSchema = z.enum(["WANT_TO_READ", "IN_PROGRESS", "COMPLETED", "ALL"]);
 export type StatusType = z.infer<typeof statusTypeSchema>;
 
-// メタデータ抽出関数を追加
-function extractMetadata(html: string) {
-  const $ = cheerio.load(html);
-  
-  const getMetaContent = (name: string): string | null => {
-    return $(`meta[name="${name}"], meta[property="${name}"], meta[property="og:${name}"]`).attr('content') ?? null;
-  };
+// ============= Schema Definitions =============
+const schemaDefinitions = {
+  articleSearch: z.object({
+    id: z.string(),
+    url: z.string(),
+    status: articleStatusSchema,
+    memo: z.string().nullable(),
+    createdAt: z.date(),
+    title: z.string().nullable(),
+    description: z.string().nullable(),
+    image: z.string().nullable(),
+  }),
 
-  return {
-    title: $('title').text() || getMetaContent('title'),
-    description: getMetaContent('description'),
-    image: getMetaContent('image'),
-  };
+  articleDetails: z.object({
+    title: z.string().min(1, "タイトルは必須です"),
+    url: z.string().url("有効なURLを入力してください"),
+    thumbnail: z.string().nullable(),
+    description: z.string().nullable(),
+  }),
+
+  input: {
+    url: z.object({
+      url: z.string().url({ message: "有効なURLを入力してください" }),
+    }),
+    save: z.object({
+      url: z.string().url(),
+      status: articleStatusSchema,
+      memo: z.string().optional(),
+    }),
+    update: z.object({
+      id: z.string(),
+      memo: z.string(),
+      status: articleStatusSchema,
+    }),
+    delete: z.object({ id: z.string() }),
+    search: z.object({ query: z.string() }),
+  },
+};
+
+export type ArticleDetails = z.infer<typeof schemaDefinitions.articleDetails>;
+
+// ============= Utility Functions =============
+/**
+ * メタデータ抽出のためのユーティリティクラス
+ */
+class MetadataExtractor {
+  /**
+   * HTMLからメタデータを抽出
+   */
+  static extract(html: string) {
+    const $ = cheerio.load(html);
+    
+    const getMetaContent = (name: string): string | null => {
+      return $(`meta[name="${name}"], meta[property="${name}"], meta[property="og:${name}"]`).attr('content') ?? null;
+    };
+
+    return {
+      title: $('title').text() || getMetaContent('title'),
+      description: getMetaContent('description'),
+      image: getMetaContent('image'),
+    };
+  }
+
+  /**
+   * URLからメタデータを取得
+   */
+  static async fetchFromUrl(url: string) {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "text/html" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    return this.extract(html);
+  }
 }
 
-// 検索結果の型定義を修正
-const articleSearchResultSchema = z.object({
-  id: z.string(),
-  url: z.string(),
-  status: articleStatusSchema,
-  memo: z.string().nullable(),
-  createdAt: z.date(),
-  title: z.string().nullable(),
-  description: z.string().nullable(),
-  image: z.string().nullable(),
-});
+/**
+ * エラーハンドリングユーティリティ
+ */
+class ErrorHandler {
+  static handle(error: unknown, message: string): never {
+    if (error instanceof Error) {
+      console.error(`${message}:`, error.message);
+    }
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message,
+    });
+  }
+}
 
-export const articleDetailsSchema = z.object({
-  title: z.string().min(1, "タイトルは必須です"),
-  url: z.string().url("有効なURLを入力してください"),
-  thumbnail: z.string().nullable(),
-  description: z.string().nullable(),
-});
-
-const urlInputSchema = z.object({
-  url: z.string().url({ message: "有効なURLを入力してください" }),
-});
-
-const saveArticleSchema = z.object({
-  url: z.string().url(),
-  status: articleStatusSchema,
-  memo: z.string().optional(),
-});
-
-const updateArticleSchema = z.object({
-  id: z.string(),
-  memo: z.string(),
-  status: articleStatusSchema,
-});
-
-export type ArticleDetails = z.infer<typeof articleDetailsSchema>;
-
+// ============= Router Definition =============
 export const articleRouter = createTRPCRouter({
   getArticlesByStatus: protectedProcedure
-    .input(
-      z.object({
-        status: statusTypeSchema,
-      })
-    )
-    .output(z.array(articleSearchResultSchema))
+    .input(z.object({ status: statusTypeSchema }))
+    .output(z.array(schemaDefinitions.articleSearch))
     .query(async ({ ctx, input }) => {
       if (!ctx.session?.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "ログインが必要です",
-        });
+        throw new TRPCError({ code: "UNAUTHORIZED", message: ERROR_MESSAGES.UNAUTHORIZED });
       }
 
       try {
         const where = {
           userId: ctx.session.user.id,
-          ...(input.status && input.status !== "ALL" ? { status: input.status } : {}),
+          ...(input.status !== "ALL" ? { status: input.status } : {}),
         };
 
         const articles = await ctx.db.article.findMany({
           where,
-          orderBy: {
-            createdAt: "desc",
-          },
+          orderBy: { createdAt: "desc" },
         });
 
         return articles.map(article => ({
-          id: article.id,
-          url: article.url,
+          ...article,
           status: article.status as ArticleStatus,
-          memo: article.memo,
-          createdAt: article.createdAt,
-          title: article.title,
-          description: article.description,
-          image: article.image,
         }));
       } catch (error) {
-        console.error("GetArticlesByStatus error:", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "記事の取得に失敗しました",
-        });
+        ErrorHandler.handle(error, ERROR_MESSAGES.FETCH_FAILED);
       }
     }),
 
   getArticleDetails: publicProcedure
-    .input(urlInputSchema)
-    .output(articleDetailsSchema)
-    .mutation(async ({ input }): Promise<ArticleDetails> => {
+    .input(schemaDefinitions.input.url)
+    .output(schemaDefinitions.articleDetails)
+    .mutation(async ({ input }) => {
       try {
-        const validatedUrl = urlInputSchema.parse(input);
-
-        const response = await fetch(validatedUrl.url, {
-          method: "GET",
-          headers: {
-            Accept: "text/html",
-          },
-        });
-
-        if (!response.ok) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `URLにアクセスできません: ${response.status} ${response.statusText}`,
-          });
-        }
-
-        const html = await response.text();
-        const metadata = extractMetadata(html);
-
+        const metadata = await MetadataExtractor.fetchFromUrl(input.url);
+        
         return {
           title: metadata.title ?? "",
-          url: validatedUrl.url,
+          url: input.url,
           thumbnail: metadata.image,
           description: metadata.description,
         };
       } catch (error) {
-        if (error instanceof Error) {
-          console.error("GetArticleDetails error:", error.message);
-        }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "記事の詳細取得に失敗しました",
-        });
+        ErrorHandler.handle(error, ERROR_MESSAGES.DETAILS_FAILED);
       }
     }),
 
   save: protectedProcedure
-    .input(saveArticleSchema)
+    .input(schemaDefinitions.input.save)
     .mutation(async ({ ctx, input }) => {
       try {
-        // 直接URLからメタデータを取得
-        const response = await fetch(input.url, {
-          method: "GET",
-          headers: {
-            Accept: "text/html",
-          },
-        });
+        const metadata = await MetadataExtractor.fetchFromUrl(input.url);
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch article: ${response.status} ${response.statusText}`);
-        }
-
-        const html = await response.text();
-        const metadata = extractMetadata(html);
-
-        const article = await ctx.db.article.create({
+        return await ctx.db.article.create({
           data: {
             url: input.url,
             status: input.status,
             memo: input.memo ?? "",
             userId: ctx.session.user.id,
-            title: metadata.title ?? null,
-            description: metadata.description ?? null,
-            image: metadata.image ?? null,
+            title: metadata.title,
+            description: metadata.description,
+            image: metadata.image,
           },
         });
-        return article;
       } catch (error) {
-        if (error instanceof Error) {
-          console.error("Save error:", error.message);
-        }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "記事の保存に失敗しました",
-        });
+        ErrorHandler.handle(error, ERROR_MESSAGES.SAVE_FAILED);
       }
     }),
 
   searchArticles: protectedProcedure
-    .input(z.object({ query: z.string() }))
-    .output(z.array(articleSearchResultSchema))
+    .input(schemaDefinitions.input.search)
+    .output(z.array(schemaDefinitions.articleSearch))
     .query(async ({ ctx, input }) => {
       try {
         const articles = await ctx.db.article.findMany({
@@ -212,37 +213,23 @@ export const articleRouter = createTRPCRouter({
               { title: { contains: input.query, mode: 'insensitive' } },
             ],
           },
-          orderBy: {
-            createdAt: "desc",
-          },
+          orderBy: { createdAt: "desc" },
         });
 
         return articles.map(article => ({
-          id: article.id,
-          url: article.url,
+          ...article,
           status: article.status as ArticleStatus,
-          memo: article.memo,
-          createdAt: article.createdAt,
-          title: article.title,
-          description: article.description,
-          image: article.image,
         }));
       } catch (error) {
-        if (error instanceof Error) {
-          console.error("Search error:", error.message);
-        }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "記事の検索に失敗しました",
-        });
+        ErrorHandler.handle(error, ERROR_MESSAGES.SEARCH_FAILED);
       }
     }),
 
   update: protectedProcedure
-    .input(updateArticleSchema)
+    .input(schemaDefinitions.input.update)
     .mutation(async ({ ctx, input }) => {
       try {
-        const article = await ctx.db.article.update({
+        return await ctx.db.article.update({
           where: {
             id: input.id,
             userId: ctx.session.user.id,
@@ -252,20 +239,13 @@ export const articleRouter = createTRPCRouter({
             status: input.status,
           },
         });
-        return article;
       } catch (error) {
-        if (error instanceof Error) {
-          console.error("Update error:", error.message);
-        }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "記事の更新に失敗しました",
-        });
+        ErrorHandler.handle(error, ERROR_MESSAGES.UPDATE_FAILED);
       }
     }),
 
   delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(schemaDefinitions.input.delete)
     .mutation(async ({ ctx, input }) => {
       try {
         await ctx.db.article.delete({
@@ -276,13 +256,7 @@ export const articleRouter = createTRPCRouter({
         });
         return { success: true };
       } catch (error) {
-        if (error instanceof Error) {
-          console.error("Delete error:", error.message);
-        }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "記事の削除に失敗しました",
-        });
+        ErrorHandler.handle(error, ERROR_MESSAGES.DELETE_FAILED);
       }
     }),
 });

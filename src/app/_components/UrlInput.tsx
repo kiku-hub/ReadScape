@@ -5,9 +5,21 @@ import { api } from "~/trpc/react";
 import type { ArticleDetails } from "~/server/api/routers/article";
 import { z } from "zod";
 
-const PLACEHOLDER_TEXT = "記事のURLを入力してください";
-const ARIA_LABEL = "記事を追加";
+// 定数の集約
+const CONSTANTS = {
+  PLACEHOLDER: "記事のURLを入力してください",
+  ARIA_LABEL: "記事を追加",
+  ERROR_MESSAGES: {
+    EMPTY_URL: "URLを入力してください",
+    INVALID_URL: "有効なURLを入力してください",
+    INVALID_PROTOCOL: "HTTPまたはHTTPSのURLを入力してください",
+    INVALID_DATA: "無効なデータ形式です",
+    GENERIC_ERROR: "エラーが発生しました",
+  },
+  ERROR_TIMEOUT: 3000,
+} as const;
 
+// バリデーションスキーマの定義
 const articleDataSchema = z.object({
   title: z.string(),
   url: z.string().url(),
@@ -15,14 +27,37 @@ const articleDataSchema = z.object({
   description: z.string().nullable(),
 });
 
+type ValidationResult = {
+  isValid: boolean;
+  error?: string;
+  url?: string;
+};
+
+// Props型の定義
 interface UrlInputProps {
   onUrlSubmit: (articleDetails: ArticleDetails) => void;
   onModalOpen: () => void;
 }
 
-const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
-  const [url, setUrl] = useState("");
-  const [isActive, setIsActive] = useState(false);
+// URLバリデーション関数
+const validateUrl = (url: string): ValidationResult => {
+  if (!url.trim()) {
+    return { isValid: false, error: CONSTANTS.ERROR_MESSAGES.EMPTY_URL };
+  }
+
+  try {
+    const urlObject = new URL(url);
+    if (!["http:", "https:"].includes(urlObject.protocol)) {
+      return { isValid: false, error: CONSTANTS.ERROR_MESSAGES.INVALID_PROTOCOL };
+    }
+    return { isValid: true, url: urlObject.href };
+  } catch {
+    return { isValid: false, error: CONSTANTS.ERROR_MESSAGES.INVALID_URL };
+  }
+};
+
+// カスタムフック: 記事詳細の取得と状態管理
+const useArticleDetails = (onUrlSubmit: UrlInputProps["onUrlSubmit"], onModalOpen: UrlInputProps["onModalOpen"]) => {
   const [error, setError] = useState<string | null>(null);
 
   const { mutate: getArticleDetails, isPending: isSubmitting } =
@@ -40,63 +75,53 @@ const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
           setError(null);
           onUrlSubmit(safeData);
           onModalOpen();
-          setUrl("");
         } catch (err) {
-          setError("無効なデータ形式です");
+          setError(CONSTANTS.ERROR_MESSAGES.INVALID_DATA);
           console.error("Data validation error:", err);
         }
       },
       onError: (err) => {
         const errorMessage =
-          err instanceof Error ? err.message : "エラーが発生しました";
+          err instanceof Error ? err.message : CONSTANTS.ERROR_MESSAGES.GENERIC_ERROR;
         setError(errorMessage);
-        setTimeout(() => setError(null), 3000);
+        setTimeout(() => setError(null), CONSTANTS.ERROR_TIMEOUT);
       },
     });
 
-  const handleInputClick = () => {
-    setIsActive(true);
-  };
+  return { getArticleDetails, isSubmitting, error, setError };
+};
 
-  const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      void handleAddClick();
-    }
-  };
+const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
+  const [url, setUrl] = useState("");
+  const [isActive, setIsActive] = useState(false);
+  const { getArticleDetails, isSubmitting, error, setError } = useArticleDetails(
+    onUrlSubmit,
+    onModalOpen
+  );
 
-  const handleAddClick = async () => {
-    if (!url.trim()) {
-      setError("URLを入力してください");
+  // URL送信ハンドラー
+  const handleSubmit = () => {
+    const validation = validateUrl(url);
+    if (!validation.isValid) {
+      setError(validation.error ?? CONSTANTS.ERROR_MESSAGES.INVALID_URL);
       return;
     }
 
-    try {
-      const urlObject = new URL(url);
-      if (!['http:', 'https:'].includes(urlObject.protocol)) {
-        setError("HTTPまたはHTTPSのURLを入力してください");
-        return;
-      }
-      setError(null);
-      getArticleDetails({ url: urlObject.href });
-    } catch {
-      setError("有効なURLを入力してください");
-    }
+    getArticleDetails({ url: validation.url! });
+    setUrl("");
   };
 
+  // クリックイベントハンドラー
   const handleOutsideClick = useCallback((event: MouseEvent) => {
     const container = document.getElementById("url-input-container");
-    const target = event.target as Node;
-
-    if (container && !container.contains(target)) {
+    if (container && !container.contains(event.target as Node)) {
       setIsActive(false);
     }
   }, []);
 
   useEffect(() => {
     document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [handleOutsideClick]);
 
   return (
@@ -108,17 +133,17 @@ const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
           boxShadow: isActive
             ? "0 0 10px 3px rgba(59, 130, 246, 0.8)"
             : error
-              ? "0 0 10px 3px rgba(239, 68, 68, 0.5)"
-              : "0 10px 20px rgba(0, 0, 0, 0.1)",
+            ? "0 0 10px 3px rgba(239, 68, 68, 0.5)"
+            : "0 10px 20px rgba(0, 0, 0, 0.1)",
         }}
       >
         <input
           type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          onClick={handleInputClick}
-          onKeyPress={handleKeyPress}
-          placeholder={PLACEHOLDER_TEXT}
+          onClick={() => setIsActive(true)}
+          onKeyPress={(e) => e.key === "Enter" && handleSubmit()}
+          placeholder={CONSTANTS.PLACEHOLDER}
           disabled={isSubmitting}
           className={`flex-1 bg-white rounded-full py-2 md:py-3 px-4 md:px-6 text-sm md:text-base text-gray-600 outline-none shadow-inner transition-all duration-300 ${
             error ? "border border-red-400" : "border-none"
@@ -132,8 +157,8 @@ const UrlInput: React.FC<UrlInputProps> = ({ onUrlSubmit, onModalOpen }) => {
           }}
         />
         <button
-          onClick={() => void handleAddClick()}
-          aria-label={ARIA_LABEL}
+          onClick={handleSubmit}
+          aria-label={CONSTANTS.ARIA_LABEL}
           disabled={isSubmitting}
           className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg transition-all duration-300 ${
             isSubmitting
