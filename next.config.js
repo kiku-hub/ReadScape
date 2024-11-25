@@ -18,6 +18,13 @@ const config = {
       },
     ],
   },
+  // SWCの設定を追加
+  compiler: {
+    // 必要なトランスフォームを有効化
+    emotion: true,
+    styledComponents: true,
+    removeConsole: process.env.NODE_ENV === "production",
+  },
 };
 
 export default config;

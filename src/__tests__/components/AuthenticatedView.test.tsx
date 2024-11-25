@@ -36,22 +36,16 @@ jest.mock('@/app/_components/UrlInput', () => {
   return MockUrlInput;
 });
 
-jest.mock('@/app/_components/StatusTabs', () => {
-  const MockStatusTabs = () => <div>Status Tabs</div>;
-  MockStatusTabs.displayName = 'StatusTabs';
-  return MockStatusTabs;
-});
-
 jest.mock('@/app/_components/Modal', () => {
   const MockModal = ({ 
     isOpen, 
     onClose, 
-    articleDetails, 
+    _articleDetails, // articleDetails を _articleDetails に変更
     onSave 
   }: { 
     isOpen: boolean;
     onClose: () => void;
-    articleDetails: ArticleDetails | null;
+    _articleDetails: ArticleDetails | null; // 型定義も変更
     onSave: (status: string, memo: string) => void;
   }) => (
     isOpen ? (
