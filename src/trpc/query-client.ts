@@ -27,8 +27,8 @@ const DEFAULT_QUERY_CONFIG: QueryClientConfig = {
       // エラー時の再試行を3回までに制限
       retry: 3,
       
-      // キャッシュの保持時間を設定
-      cacheTime: CACHE_CONFIG.STALE_TIME * 2,
+      // キャッシュの保持時間を設定 (cacheTime → gcTime)
+      gcTime: CACHE_CONFIG.STALE_TIME * 2,
     },
     dehydrate: {
       serializeData: SERIALIZATION_CONFIG.serialize,
