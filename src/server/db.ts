@@ -1,15 +1,18 @@
 import { PrismaClient } from "@prisma/client";
+import type { Prisma } from "@prisma/client";  // type インポートに変更
 import { env } from "~/env";
 
 /**
  * Prismaクライアントの設定オプション
  * 開発環境では詳細なログを出力し、本番環境ではエラーのみを出力
  */
-const PRISMA_OPTIONS = {
+const PRISMA_OPTIONS: Prisma.PrismaClientOptions = {
   log: env.NODE_ENV === "development" 
-    ? ["query", "error", "warn"] 
-    : ["error"],
-} as const;
+    ? ['query', 'error', 'warn'] as Prisma.LogLevel[]
+    : ['error'] as Prisma.LogLevel[],
+};
+
+// ... 残りのコードは変更なし
 
 /**
  * PrismaClientのインスタンスを生成する関数
