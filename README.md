@@ -43,15 +43,15 @@
 
 ### 記事保存機能
 
-![2f172b84df3d8dd9868fd0d3f3f584c5.gif](https://prod-files-secure.s3.us-west-2.amazonaws.com/ad69c22c-3687-460d-a2eb-8175ac6e179f/7ecb2065-82de-4bdd-afe3-f4383b093419/2f172b84df3d8dd9868fd0d3f3f584c5.gif)
+(https://prod-files-secure.s3.us-west-2.amazonaws.com/ad69c22c-3687-460d-a2eb-8175ac6e179f/7ecb2065-82de-4bdd-afe3-f4383b093419/2f172b84df3d8dd9868fd0d3f3f584c5.gif)
 
 ### 記事進捗管理機能
 
-![f6c388a3245e7eb52f465bf44c895bcf.gif](https://prod-files-secure.s3.us-west-2.amazonaws.com/ad69c22c-3687-460d-a2eb-8175ac6e179f/da7714f1-8a78-41ae-b032-b6ebdf68ed5b/f6c388a3245e7eb52f465bf44c895bcf.gif)
+(https://prod-files-secure.s3.us-west-2.amazonaws.com/ad69c22c-3687-460d-a2eb-8175ac6e179f/da7714f1-8a78-41ae-b032-b6ebdf68ed5b/f6c388a3245e7eb52f465bf44c895bcf.gif)
 
 ### 記事検索機能
 
-![a8b29508b24722048d36462ed68cea0f.gif](https://prod-files-secure.s3.us-west-2.amazonaws.com/ad69c22c-3687-460d-a2eb-8175ac6e179f/0ccb94d9-2819-44e1-882f-b0be6b55459c/a8b29508b24722048d36462ed68cea0f.gif)
+(https://prod-files-secure.s3.us-west-2.amazonaws.com/ad69c22c-3687-460d-a2eb-8175ac6e179f/0ccb94d9-2819-44e1-882f-b0be6b55459c/a8b29508b24722048d36462ed68cea0f.gif)
 
 ## 主要機能（追加予定の機能）
 1. **主要機能**
@@ -68,7 +68,7 @@
 
 ## ER図
 
-!https://prod-files-secure.s3.us-west-2.amazonaws.com/ad69c22c-3687-460d-a2eb-8175ac6e179f/105c6dea-0330-47be-a080-14f91be9dbb4/%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%BC%E3%83%B3%E3%82%B7%E3%83%A7%E3%83%83%E3%83%88_0006-11-26_12.49.36.png
+https://prod-files-secure.s3.us-west-2.amazonaws.com/ad69c22c-3687-460d-a2eb-8175ac6e179f/105c6dea-0330-47be-a080-14f91be9dbb4/%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%BC%E3%83%B3%E3%82%B7%E3%83%A7%E3%83%83%E3%83%88_0006-11-26_12.49.36.png
 
 ## **画面遷移図**
 
