@@ -60,8 +60,8 @@ const STYLES = {
       backgroundColor: 'rgba(255, 255, 255, 0.9)',
       backdropFilter: 'blur(4px)',
     }
-  }
-} as const;
+  } as const
+}
 
 // カスタムフック: 検索ロジック
 const useArticleSearch = (searchQuery: string, isOpen: boolean) => {
@@ -222,10 +222,10 @@ export default function SearchModal() {
         <Box
           sx={{
             position: 'relative',
-            width: { xs: '90%', sm: '600px', md: '800px' },
-            maxHeight: '85vh',
+            width: { xs: '100%', sm: '600px', md: '800px' },
+            maxHeight: { xs: '100vh', sm: '85vh' },
             bgcolor: 'background.paper',
-            borderRadius: '16px',
+            borderRadius: { xs: 0, sm: '16px' },
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
             p: { xs: 2, sm: 4 },
             overflow: 'hidden',
@@ -234,6 +234,10 @@ export default function SearchModal() {
               from: { opacity: 0, transform: 'scale(0.95)' },
               to: { opacity: 1, transform: 'scale(1)' },
             },
+            position: { xs: 'fixed', sm: 'relative' },
+            bottom: { xs: 0, sm: 'auto' },
+            left: { xs: 0, sm: 'auto' },
+            right: { xs: 0, sm: 'auto' },
           }}
         >
           <SearchField 
@@ -245,11 +249,14 @@ export default function SearchModal() {
           <Box 
             sx={{ 
               mt: 2,
-              maxHeight: 'calc(85vh - 140px)',
+              maxHeight: {
+                xs: 'calc(100vh - 180px)',
+                sm: 'calc(85vh - 140px)'
+              },
               overflow: 'auto',
               px: 1,
               '&::-webkit-scrollbar': {
-                width: '8px',
+                width: '4px',
               },
               '&::-webkit-scrollbar-track': {
                 background: 'transparent',
@@ -261,6 +268,8 @@ export default function SearchModal() {
                   background: '#ccc',
                 },
               },
+              WebkitOverflowScrolling: 'touch',
+              msOverflowStyle: '-ms-autohiding-scrollbar',
             }}
           >
             {searchResults.length === 0 && searchQuery && (
