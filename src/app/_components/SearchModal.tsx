@@ -221,6 +221,7 @@ export default function SearchModal() {
       >
         <Box
           sx={{
+            position: 'relative',
             width: { xs: '100%', sm: '600px', md: '800px' },
             maxHeight: { xs: '100vh', sm: '85vh' },
             bgcolor: 'background.paper',

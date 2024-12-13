@@ -237,10 +237,22 @@ const StatusTabs: React.FC = () => {
         ))}
       </div>
 
-      <div className="relative w-full max-w-[1440px] rounded-3xl bg-white p-4 md:p-8 shadow-md overflow-y-auto flex-1 mx-4">
-        <div className="animate-fadeSlideIn transition-opacity duration-500">
-          {renderContent()}
+      <div className="relative w-full max-w-[1440px] rounded-3xl bg-white p-4 md:p-8 shadow-md mx-4 flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto pb-20 sm:pb-16">
+          <div className="animate-fadeSlideIn transition-opacity duration-500">
+            {renderContent()}
+          </div>
         </div>
+
+        {articles.length > ITEMS_PER_PAGE && (
+          <div className="fixed bottom-4 left-0 right-0 flex justify-center bg-white/80 backdrop-blur-sm py-4 shadow-lg sm:static sm:py-0 sm:shadow-none">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
