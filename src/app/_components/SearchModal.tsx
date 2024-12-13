@@ -221,7 +221,6 @@ export default function SearchModal() {
       >
         <Box
           sx={{
-            position: 'relative',
             width: { xs: '100%', sm: '600px', md: '800px' },
             maxHeight: { xs: '100vh', sm: '85vh' },
             bgcolor: 'background.paper',
@@ -238,6 +237,8 @@ export default function SearchModal() {
             bottom: { xs: 0, sm: 'auto' },
             left: { xs: 0, sm: 'auto' },
             right: { xs: 0, sm: 'auto' },
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <SearchField 
@@ -248,13 +249,15 @@ export default function SearchModal() {
 
           <Box 
             sx={{ 
+              flex: 1,
+              overflow: 'auto',
               mt: 2,
               maxHeight: {
                 xs: 'calc(100vh - 180px)',
                 sm: 'calc(85vh - 140px)'
               },
-              overflow: 'auto',
               px: 1,
+              pb: { xs: 4, sm: 2 },
               '&::-webkit-scrollbar': {
                 width: '4px',
               },
